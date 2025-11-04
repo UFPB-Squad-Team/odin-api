@@ -11,31 +11,31 @@ ODIN-Backend is the RESTful API for ODIN, built with FastAPI following Clean Arc
 
 
 ## 🏗️ Architecture (Clean Architecture)
-server/
-├── src/
-│   ├── domain/                
-│   │   ├── entities/          
-│   │   │   └── school.py
-│   │   ├── enums/             
-│   │   │   ├── enum_uf.py
-│   │   │   └── enum_dependencies_administrativa.py
-│   │   ├── repositories/      
-│   │   └── value_objects/     
-│   ├── application/           
-│   │   ├── use_cases/                      
-│   ├── infrastructure/        
-│   │   ├── database/
-│   │   │   └── mongodb_repositories.py
-│   │   └── config/            
-│   └── presentation/          
-│       ├── api/
-│       │   └── routes/        
-│       ├── controllers/       
-│       └── middleware/        
-├── tests/                     
-├── pyproject.toml            
-├── poetry.lock               
-└── README.md                 
+  server/
+  ├── src/
+  │   ├── domain/                
+  │   │   ├── entities/          
+  │   │   │   └── school.py
+  │   │   ├── enums/             
+  │   │   │   ├── enum_uf.py
+  │   │   │   └── enum_dependencies_administrativa.py
+  │   │   ├── repositories/      
+  │   │   └── value_objects/     
+  │   ├── application/           
+  │   │   ├── use_cases/                      
+  │   ├── infrastructure/        
+  │   │   ├── database/
+  │   │   │   └── mongodb_repositories.py
+  │   │   └── config/            
+  │   └── presentation/          
+  │       ├── api/
+  │       │   └── routes/        
+  │       ├── controllers/       
+  │       └── middleware/        
+  ├── tests/                     
+  ├── pyproject.toml            
+  ├── poetry.lock               
+  └── README.md                 
 
 
 ## 🚀 Quick Start
