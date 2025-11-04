@@ -11,7 +11,6 @@ ODIN-Backend is the RESTful API for ODIN, built with FastAPI following Clean Arc
 
 
 ## 🏗️ Architecture (Clean Architecture)
-  server/
   ├── src/
   │   ├── domain/                
   │   │   ├── entities/          
