@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 from ..enums.enum_dependencia_administrativa import DependenciaAdministrativa
 from ..enums.enum_uf import UF
 from ..enums.enum_tipo_localizacao import TipoLocalizacao
-from ..validators.school_validation import SchoolValidator
+from ..validators.school_validation import SchoolValidator, DomainValidationError
 
 LocationCoordinates = Tuple[float, float]
 
@@ -28,18 +28,24 @@ class School:
         dependencia_adm: DependenciaAdministrativa,
         tipo_localizacao: TipoLocalizacao,
         localizacao: Location,
-        score_risco: float,
-        score_risco_contextualizado: float,
         indicadores: Optional[Indicadores] = None,
         infraestrutura: Optional[Dict[str, bool]] = None,
         id: Optional[UUID] = None
     ):
-        self._validator = SchoolValidator(
-            municipio_id_ibge,
-            escola_id_inep,
-            escola_nome,
-            score_risco
-        )
+        try:
+            self._validator = SchoolValidator(
+                municipio_id_ibge=municipio_id_ibge,
+                escola_id_inep=escola_id_inep,
+                escola_nome=escola_nome,
+                municipio_nome=municipio_nome,
+                estado_sigla=estado_sigla,
+                dependencia_adm=dependencia_adm,
+                tipo_localizacao=tipo_localizacao,
+                localizacao=localizacao,
+                indicadores=indicadores
+            )
+        except DomainValidationError as e:
+            raise e
         
         self._id = id or uuid4()
         self._municipio_id_ibge = municipio_id_ibge
@@ -50,8 +56,6 @@ class School:
         self._dependencia_adm = dependencia_adm
         self._tipo_localizacao = tipo_localizacao
         self._localizacao = localizacao
-        self._score_risco = score_risco
-        self._score_risco_contextualizado = score_risco_contextualizado
         self._indicadores = indicadores or Indicadores()
         self._infraestrutura = infraestrutura or {}
 
@@ -74,10 +78,6 @@ class School:
     @property
     def estado_sigla(self) -> UF:
         return self._estado_sigla
-
-    @property
-    def score_risco(self) -> float:
-        return self._score_risco
 
     @property
     def localizacao(self) -> Location:
