@@ -1,5 +1,5 @@
 from typing import Optional, Dict
-from src.domain.validators.school_validation import DomainValidationError
+from domain.exeptions.validation_error import DomainValidationError
 from ..entities.school import Location, Indicadores
 from ..enums.enum_uf import UF
 from ..enums.enum_dependencia_administrativa import DependenciaAdministrativa
@@ -30,6 +30,7 @@ class SchoolValidator:
         self._tipo_localizacao = tipo_localizacao
         self._localizacao = localizacao
         self._indicadores = indicadores
+        self._infraestrutura = infraestrutura
         
         self._validate()
 
@@ -43,6 +44,7 @@ class SchoolValidator:
         self._validate_municipio_nome()
         self._validate_location()
         self._validate_indicadores()
+        self._validate_infraestrutura()
 
     def _validate_ibge(self):
         """ Validates the 7-digit IBGE municipality code. """
@@ -82,15 +84,14 @@ class SchoolValidator:
     def _validate_indicadores(self):
         """ Validates the optional Indicadores dataclass. """
         if self._indicadores:
-            for i in self.Indicadores:
-                if not i:
-                    raise DomainValidationError(f"Indicadores fields must be valid. Indicador {i} is invalid.")
+            if self._indicadores.total_alunos < 0:
+                raise DomainValidationError("indicadores.total_alunos cannot be negative.")
     
     def _validate_infraestrutura(self):
         """ Validates the optional infraestrutura dictionary. """
         if self._infraestrutura:
             for key, value in self._infraestrutura.items():
-                if value is None or key is None:
-                    raise DomainValidationError(f"Infraestructure data cannot have null keys or values.")
+                if not key or not isinstance(key, str):
+                    raise DomainValidationError(f"Invalid infrastructure key: {key}.")
                 if not isinstance(value, bool):
-                    raise DomainValidationError(f"The value to infrastructure key '{key}' must be a boolean. Actually is '{type(value)}'.")
+                    raise DomainValidationError(f"The value for infrastructure key '{key}' must be a boolean. Got '{type(value)}'.")
