@@ -4,16 +4,14 @@ from uuid import UUID
 
 from src.domain.entities.school import School
 from src.domain.value_objects.pagination import PaginatedResponse
-from src.domain.enums.enum_uf import UF
-from src.domain.enums.enum_dependencia_administrativa import DependenciaAdministrativa
-from src.domain.enums.enum_tipo_localizacao import TipoLocalizacao
+from src.domain.value_objects.school_criteria import SchoolCriteria
 
 class ISchoolRepository(ABC):
     """
     This is the READ-ONLY interface for the School repository.
     
-    It defines the contract for querying school data, with a focus
-    on paginated listing and retrieval by unique identifiers.
+    It defines the contract for querying school data, using
+    unique identifiers or a flexible criteria object for searching.
     """
 
     @abstractmethod
@@ -31,96 +29,20 @@ class ISchoolRepository(ABC):
         ...
 
     @abstractmethod
-    def get_by_name(
-        self, 
-        name: str, 
-        page: int, 
-        page_size: int
-    ) -> PaginatedResponse[School]:
+    def search(self, criteria: SchoolCriteria) -> PaginatedResponse[School]:
         """
-        Retrieves a paginated list of schools matching a name.
-        """
-        ...
-
-    @abstractmethod
-    def get_by_uf(
-        self, 
-        uf: UF,
-        page: int, 
-        page_size: int
-    ) -> PaginatedResponse[School]:
-        """
-        Retrieves a paginated list of schools by its UF.
-        """
-        ...
-
-    @abstractmethod
-    def get_by_municipality(
-        self, 
-        municipality: str, 
-        page: int, 
-        page_size: int
-    ) -> PaginatedResponse[School]:
-        """
-        Retrieves a paginated list of schools by its municipality.
-        """
-        ...
-
-    @abstractmethod
-    def get_by_street(
-        self, 
-        street: str, 
-        page: int, 
-        page_size: int
-    ) -> PaginatedResponse[School]:
-        """
-        Retrieves a paginated list of schools by its street.
-        """
-        ...
-    
-    @abstractmethod
-    def get_by_neighbourhood(
-        self, 
-        neighbourhood: str, 
-        page: int, 
-        page_size: int
-    ) -> PaginatedResponse[School]:
-        """
-        Retrieves a paginated list of schools by its neighbourhood.
-        """
-        ...
-
-    @abstractmethod
-    def get_by_administrative_dependency(
-        self, 
-        administrative_dependency: DependenciaAdministrativa, 
-        page: int, 
-        page_size: int
-    ) -> PaginatedResponse[School]:
-        """
-        Retrieves a paginated list of schools by its administrative dependency (municipal, state, federal, private).
-        """
-        ...
-
-    @abstractmethod
-    def get_by_location(
-        self, 
-        location_type: TipoLocalizacao, 
-        page: int, 
-        page_size: int
-    ) -> PaginatedResponse[School]:
-        """
-        Retrieves a paginated list of schools by its location type (urban, rural).
-        """
-        ...
-
-    @abstractmethod
-    def list_all(
-        self, 
-        page: int, 
-        page_size: int
-    ) -> PaginatedResponse[School]:
-        """
-        Retrieves a paginated list of all schools.
+        Retrieves a paginated list of schools based on a flexible
+        set of criteria.
+        
+        This method REPLACES list_all, get_by_name, get_by_uf,
+        get_by_municipality, and all other paginated get_by_ methods.
+        
+        Args:
+            criteria: A SchoolCriteria object containing all
+                      filter parameters and pagination info.
+                      
+        Returns:
+            A PaginatedResponse container with the list of School
+            entities for the requested page and pagination metadata.
         """
         ...
