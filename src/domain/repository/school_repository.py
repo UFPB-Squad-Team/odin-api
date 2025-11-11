@@ -8,26 +8,28 @@ from src.domain.enums.enum_uf import UF
 from src.domain.enums.enum_dependencia_administrativa import DependenciaAdministrativa
 from src.domain.enums.enum_tipo_localizacao import TipoLocalizacao
 
+
 class ISchoolRepository(ABC):
     """
     This is the READ-ONLY interface for the School repository.
-    
+
     It defines the contract for querying school data, with a focus
     on paginated listing and retrieval by unique identifiers.
     """
 
+    """
     @abstractmethod
     def get_by_id(self, school_id: UUID) -> Optional[School]:
-        """
+        '''
         Retrieves a single school by its unique identifier (UUID).
-        """
+        '''
         ...
         
     @abstractmethod
     def get_by_inep_id(self, inep_id: int) -> Optional[School]:
-        """
+        '''
         Retrieves a single school by its INEP ID.
-        """
+        '''
         ...
 
     @abstractmethod
@@ -37,9 +39,9 @@ class ISchoolRepository(ABC):
         page: int, 
         page_size: int
     ) -> PaginatedResponse[School]:
-        """
+        '''
         Retrieves a paginated list of schools matching a name.
-        """
+        '''
         ...
 
     @abstractmethod
@@ -49,9 +51,9 @@ class ISchoolRepository(ABC):
         page: int, 
         page_size: int
     ) -> PaginatedResponse[School]:
-        """
+        '''
         Retrieves a paginated list of schools by its UF.
-        """
+        '''
         ...
 
     @abstractmethod
@@ -61,9 +63,9 @@ class ISchoolRepository(ABC):
         page: int, 
         page_size: int
     ) -> PaginatedResponse[School]:
-        """
+        '''
         Retrieves a paginated list of schools by its municipality.
-        """
+        '''
         ...
 
     @abstractmethod
@@ -73,9 +75,9 @@ class ISchoolRepository(ABC):
         page: int, 
         page_size: int
     ) -> PaginatedResponse[School]:
-        """
+        '''
         Retrieves a paginated list of schools by its street.
-        """
+        '''
         ...
     
     @abstractmethod
@@ -85,9 +87,9 @@ class ISchoolRepository(ABC):
         page: int, 
         page_size: int
     ) -> PaginatedResponse[School]:
-        """
+        '''
         Retrieves a paginated list of schools by its neighbourhood.
-        """
+        '''
         ...
 
     @abstractmethod
@@ -97,9 +99,9 @@ class ISchoolRepository(ABC):
         page: int, 
         page_size: int
     ) -> PaginatedResponse[School]:
-        """
+        '''
         Retrieves a paginated list of schools by its administrative dependency (municipal, state, federal, private).
-        """
+        '''
         ...
 
     @abstractmethod
@@ -109,17 +111,14 @@ class ISchoolRepository(ABC):
         page: int, 
         page_size: int
     ) -> PaginatedResponse[School]:
-        """
+        '''
         Retrieves a paginated list of schools by its location type (urban, rural).
-        """
+        '''
         ...
+    """
 
     @abstractmethod
-    def list_all(
-        self, 
-        page: int, 
-        page_size: int
-    ) -> PaginatedResponse[School]:
+    def list_all(self, page: int, page_size: int) -> PaginatedResponse[School]:
         """
         Retrieves a paginated list of all schools.
         """

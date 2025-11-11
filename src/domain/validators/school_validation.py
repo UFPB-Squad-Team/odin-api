@@ -1,6 +1,7 @@
 from typing import Optional, Dict
-from domain.exeptions.validation_error import DomainValidationError
-from ..entities.school import Location, Indicadores
+from src.domain.exeptions.validation_error import DomainValidationError
+from ..value_objects.location import Location
+from ..value_objects.indicators import Indicadores
 from ..enums.enum_uf import UF
 from ..enums.enum_dependencia_administrativa import DependenciaAdministrativa
 from ..enums.enum_tipo_localizacao import TipoLocalizacao
@@ -18,9 +19,8 @@ class SchoolValidator:
         tipo_localizacao: TipoLocalizacao,
         localizacao: Location,
         indicadores: Optional[Indicadores],
-        infraestrutura: Optional[Dict[str, bool]] = None
+        infraestrutura: Optional[Dict[str, bool]] = None,
     ):
-        
         self._municipio_id_ibge = municipio_id_ibge
         self._escola_id_inep = escola_id_inep
         self._escola_nome = escola_nome
@@ -31,7 +31,7 @@ class SchoolValidator:
         self._localizacao = localizacao
         self._indicadores = indicadores
         self._infraestrutura = infraestrutura
-        
+
         self._validate()
 
     def _validate(self):
@@ -47,51 +47,65 @@ class SchoolValidator:
         self._validate_infraestrutura()
 
     def _validate_ibge(self):
-        """ Validates the 7-digit IBGE municipality code. """
-        if not self._municipio_id_ibge or len(self._municipio_id_ibge) != 7 or not self._municipio_id_ibge.isdigit():
+        """Validates the 7-digit IBGE municipality code."""
+        if (
+            not self._municipio_id_ibge
+            or len(self._municipio_id_ibge) != 7
+            or not self._municipio_id_ibge.isdigit()
+        ):
             raise DomainValidationError("municipio_id_ibge must be 7 digits.")
 
     def _validate_inep(self):
-        """ Validates the 8-digit INEP school code. """
+        """Validates the 8-digit INEP school code."""
         if not (10000000 <= self._escola_id_inep <= 99999999):
-            raise DomainValidationError(f"escola_id_inep is invalid, must be 8 digits: {self._escola_id_inep}.")
+            raise DomainValidationError(
+                f"escola_id_inep is invalid, must be 8 digits: {self._escola_id_inep}."
+            )
 
     def _validate_nome(self):
-        """ Validates the school name. """
+        """Validates the school name."""
         if not self._escola_nome or len(self._escola_nome.strip()) == 0:
             raise DomainValidationError("escola_nome is required.")
         if len(self._escola_nome) > 255:
             raise DomainValidationError("escola_nome must not exceed 255 characters.")
 
     def _validate_municipio_nome(self):
-        """ Validates the municipality name. """
+        """Validates the municipality name."""
         if not self._municipio_nome or len(self._municipio_nome.strip()) == 0:
             raise DomainValidationError("municipio_nome is required.")
-            
+
     def _validate_location(self):
-        """ Validates the Location dataclass. """
+        """Validates the Location dataclass."""
         if self._localizacao is None:
             raise DomainValidationError("localizacao is required.")
         if self._localizacao.type != "Point":
             raise DomainValidationError("localizacao.type must be 'Point'.")
-        
+
         lat, lon = self._localizacao.coordinates
         if not (-90.0 <= lat <= 90.0):
-            raise DomainValidationError(f"Invalid latitude: {lat}. Must be between -90 and 90.")
+            raise DomainValidationError(
+                f"Invalid latitude: {lat}. Must be between -90 and 90."
+            )
         if not (-180.0 <= lon <= 180.0):
-            raise DomainValidationError(f"Invalid longitude: {lon}. Must be between -180 and 180.")
+            raise DomainValidationError(
+                f"Invalid longitude: {lon}. Must be between -180 and 180."
+            )
 
     def _validate_indicadores(self):
-        """ Validates the optional Indicadores dataclass. """
+        """Validates the optional Indicadores dataclass."""
         if self._indicadores:
-            if self._indicadores.total_alunos < 0:
-                raise DomainValidationError("indicadores.total_alunos cannot be negative.")
-    
+            if self._indicadores.totalAlunos < 0:
+                raise DomainValidationError(
+                    "indicadores.totalAlunos cannot be negative."
+                )
+
     def _validate_infraestrutura(self):
-        """ Validates the optional infraestrutura dictionary. """
+        """Validates the optional infraestrutura dictionary."""
         if self._infraestrutura:
             for key, value in self._infraestrutura.items():
                 if not key or not isinstance(key, str):
                     raise DomainValidationError(f"Invalid infrastructure key: {key}.")
                 if not isinstance(value, bool):
-                    raise DomainValidationError(f"The value for infrastructure key '{key}' must be a boolean. Got '{type(value)}'.")
+                    raise DomainValidationError(
+                        f"The value for infrastructure key '{key}' must be a boolean. Got '{type(value)}'."
+                    )
