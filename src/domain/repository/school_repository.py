@@ -19,13 +19,6 @@ class ISchoolRepository(ABC):
 
     """
     @abstractmethod
-    def get_by_id(self, school_id: UUID) -> Optional[School]:
-        '''
-        Retrieves a single school by its unique identifier (UUID).
-        '''
-        ...
-        
-    @abstractmethod
     def get_by_inep_id(self, inep_id: int) -> Optional[School]:
         '''
         Retrieves a single school by its INEP ID.
@@ -116,9 +109,16 @@ class ISchoolRepository(ABC):
         '''
         ...
     """
+    
+    @abstractmethod
+    async def get_by_id(self, school_id: UUID) -> Optional[School]:
+        '''
+        Retrieves a single school by its unique identifier (UUID).
+        '''
+        ...
 
     @abstractmethod
-    def list_all(self, page: int, page_size: int) -> PaginatedResponse[School]:
+    async def list_all(self, page: int, page_size: int) -> PaginatedResponse[School]:
         """
         Retrieves a paginated list of all schools.
         """

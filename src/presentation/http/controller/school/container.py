@@ -4,7 +4,9 @@ from src.infrastructure.database.config.connect_db import mongodb
 from src.application.school.list_all_schools.list_all_schools import (
     ListAllSchools,
 )
-
+from src.application.school.get_school_by_id.get_school_by_id import (
+    GetSchoolById,
+)
 
 class Container(containers.DeclarativeContainer):
     school_repository = providers.Factory(
@@ -17,5 +19,9 @@ class Container(containers.DeclarativeContainer):
         school_repository=school_repository
     )
 
-
+    get_school_by_id_use_case = providers.Singleton(
+        GetSchoolById,
+        school_repository=school_repository
+    )
+    
 container = Container()
