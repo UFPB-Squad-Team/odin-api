@@ -123,3 +123,16 @@ class ISchoolRepository(ABC):
         Retrieves a paginated list of all schools.
         """
         ...
+
+    @abstractmethod
+    async def fuzzy_search(
+        self, 
+        query: str, 
+        page: int, 
+        page_size: int
+    ) -> PaginatedResponse[School]:
+        """
+        Performs a smart search across multiple fields (name, city, state, etc.)
+        or by coordinates if the query matches a lat/lon pattern.
+        """
+        ...

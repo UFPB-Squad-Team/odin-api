@@ -7,6 +7,7 @@ from src.application.school.list_all_schools.list_all_schools import (
 from src.application.school.get_school_by_id.get_school_by_id import (
     GetSchoolById,
 )
+from src.application.school.fuzzy_search.fuzzy_search import FuzzySearch
 
 class Container(containers.DeclarativeContainer):
     school_repository = providers.Factory(
@@ -21,6 +22,11 @@ class Container(containers.DeclarativeContainer):
 
     get_school_by_id_use_case = providers.Singleton(
         GetSchoolById,
+        school_repository=school_repository
+    )
+    
+    fuzzy_search_use_case = providers.Singleton(
+        FuzzySearch,
         school_repository=school_repository
     )
     
