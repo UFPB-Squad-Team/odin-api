@@ -47,8 +47,11 @@ class FakeCursor:
         self.skip_value = None
         self.limit_value = None
 
-    def sort(self, field, direction):
-        self.sort_args = (field, direction)
+    def sort(self, field, direction=None):
+        if isinstance(field, list):
+            self.sort_args = field
+        else:
+            self.sort_args = (field, direction)
         return self
 
     def skip(self, value):

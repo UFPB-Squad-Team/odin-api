@@ -16,11 +16,11 @@ async def test_repository_lists_paginated_schools_with_stable_sort():
     result = await repository.list_all(page=2, page_size=5)
 
     assert collection.find_args == ({}, None)
-    assert collection.cursor.sort_args == ("escolaIdInep", 1)
+    assert collection.cursor.sort_args == [("escolaIdInep", 1), ("_id", 1)]
     assert collection.cursor.skip_value == 5
     assert collection.cursor.limit_value == 5
-    assert collection.count_query is None
-    assert collection.estimated_count_called is True
+    assert collection.count_query == {}
+    assert collection.estimated_count_called is False
     assert result.total_items == 1
     assert result.page == 2
     assert result.page_size == 5

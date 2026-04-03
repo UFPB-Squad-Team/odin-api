@@ -19,8 +19,9 @@ class FakeListAllSchoolsUseCase:
         return PaginatedResponse(
             items=[build_school()],
             total_items=1,
-            page=dto.page,
-            page_size=dto.page_size,
+            page=dto.query.page,
+            page_size=dto.query.page_size,
+            next_cursor=None,
         )
 
 
@@ -62,6 +63,7 @@ async def test_school_list_route_returns_paginated_payload(monkeypatch):
     assert payload["total_items"] == 1
     assert payload["page"] == 1
     assert payload["page_size"] == 1
+    assert payload["next_cursor"] is None
     assert payload["schools"][0]["escola_nome"] == "Escola A"
 
 
@@ -86,6 +88,33 @@ async def test_school_list_route_rejects_deep_offset(monkeypatch):
         base_url="http://test"
     ) as client:
         response = await client.get("/api/v1/all?page=999999&page_size=100")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_school_list_route_rejects_unsupported_filter(monkeypatch):
+    async def fake_connect():
+        return True
+
+    async def fake_disconnect():
+        return None
+
+    from src.infrastructure.database.config.connect_db import mongodb
+
+    monkeypatch.setattr(mongodb, "connect", fake_connect)
+    monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    app.dependency_overrides[get_list_all_schools_use_case] = lambda: FakeListAllSchoolsUseCase()
+    app.dependency_overrides[get_school_by_id_use_case] = lambda: FakeGetSchoolByIdUseCase()
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://test"
+    ) as client:
+        response = await client.get("/api/v1/schools?filter[hack]=1")
 
     app.dependency_overrides.clear()
 

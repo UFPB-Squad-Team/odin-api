@@ -12,3 +12,4 @@ class PaginatedResponse(BaseModel, Generic[T]):
     total_items: int
     page: int
     page_size: int
+    next_cursor: str | None = None

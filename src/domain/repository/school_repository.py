@@ -2,13 +2,15 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from src.domain.entities.school import School
+from src.domain.repository.base_repository import IBaseReadRepository
 from src.domain.value_objects.pagination import PaginatedResponse
+from src.domain.value_objects.query import QueryOptions
 from src.domain.enums.enum_uf import UF
 from src.domain.enums.enum_dependencia_administrativa import DependenciaAdministrativa
 from src.domain.enums.enum_tipo_localizacao import TipoLocalizacao
 
 
-class ISchoolRepository(ABC):
+class ISchoolRepository(IBaseReadRepository[School], ABC):
     """
     This is the READ-ONLY interface for the School repository.
 
@@ -120,5 +122,12 @@ class ISchoolRepository(ABC):
     async def list_all(self, page: int, page_size: int) -> PaginatedResponse[School]:
         """
         Retrieves a paginated list of all schools.
+        """
+        ...
+
+    @abstractmethod
+    async def find_paginated(self, query: QueryOptions) -> PaginatedResponse[School]:
+        """
+        Retrieves schools using dynamic filters, sort and projection.
         """
         ...
