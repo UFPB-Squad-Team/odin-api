@@ -5,6 +5,9 @@ from src.presentation.http.controller.school.index import (
     router as school_controller,
 )
 from src.infrastructure.database.config.connect_db import mongodb
+from src.presentation.http.middleware.global_exception_handler import (
+    register_global_exception_handlers,
+)
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
@@ -40,5 +43,7 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan
 )
+
+register_global_exception_handlers(app)
 
 app.include_router(school_controller, prefix="/api/v1", tags=["schools"])

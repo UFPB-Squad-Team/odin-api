@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from src.infrastructure.database.config.app_config import config
 from src.presentation.http.query.query_param_parser import QueryParamParser
 from .school_query_config import SCHOOL_ALLOWED_FILTERS, SCHOOL_QUERY_FIELDS
+from src.presentation.http.schemas.school_search_schema import SchoolSearchSchema
 
 
 class PaginatedSchoolResponse(BaseModel):
@@ -42,7 +43,9 @@ class ListAllSchoolsController:
             max_page_size=config.max_page_size,
         )
 
-        dto = ListSchoolsDTO(query=query)
+        search_schema = SchoolSearchSchema.from_query_options(query)
+
+        dto = ListSchoolsDTO(query=search_schema.to_query_options())
 
         return await self.list_all_schools_use_case.execute(dto=dto)
 
