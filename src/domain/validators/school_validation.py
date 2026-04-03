@@ -81,14 +81,19 @@ class SchoolValidator:
         if self._localizacao.type != "Point":
             raise DomainValidationError("localizacao.type must be 'Point'.")
 
-        lat, lon = self._localizacao.coordinates
-        if not (-90.0 <= lat <= 90.0):
+        if len(self._localizacao.coordinates) != 2:
             raise DomainValidationError(
-                f"Invalid latitude: {lat}. Must be between -90 and 90."
+                "localizacao.coordinates must contain [longitude, latitude]."
             )
+
+        lon, lat = self._localizacao.coordinates
         if not (-180.0 <= lon <= 180.0):
             raise DomainValidationError(
                 f"Invalid longitude: {lon}. Must be between -180 and 180."
+            )
+        if not (-90.0 <= lat <= 90.0):
+            raise DomainValidationError(
+                f"Invalid latitude: {lat}. Must be between -90 and 90."
             )
 
     def _validate_indicadores(self):

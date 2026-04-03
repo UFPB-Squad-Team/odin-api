@@ -2,4 +2,4 @@ from pydantic import BaseModel
 
 
 class Indicadores(BaseModel):
-    totalAlunos: int
+    totalAlunos: int = 0

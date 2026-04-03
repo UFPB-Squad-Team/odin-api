@@ -1,10 +1,14 @@
 from motor.motor_asyncio import AsyncIOMotorClient
+from bson import ObjectId
+from bson.errors import InvalidId
+from typing import Optional
+
 from src.domain.entities.school import School
 from src.domain.repository.school_repository import ISchoolRepository
 from src.domain.value_objects.pagination import PaginatedResponse
+from src.infrastructure.database.config.app_config import config
+from .pagination import fetch_paginated_documents
 from ..mapper.school_mapper import MongoSchoolMapper
-from typing import Optional
-from bson import ObjectId
 
 
 class MongoSchoolRepository(ISchoolRepository):
@@ -25,16 +29,17 @@ class MongoSchoolRepository(ISchoolRepository):
         page_size: int,
     ) -> PaginatedResponse[School]:
 
-        cursor = (
-            self.collection.find()
-            .skip((page - 1) * page_size)
-            .limit(page_size)
+        schools_docs, total = await fetch_paginated_documents(
+            self.collection,
+            page=page,
+            page_size=page_size,
+            sort_field="escolaIdInep",
+            use_estimated_total_for_unfiltered=(
+                config.use_estimated_total_for_unfiltered_lists
+            ),
         )
-        schools_docs = await cursor.to_list(length=page_size)
 
         schools = MongoSchoolMapper.to_domain_many(schools_docs)
-
-        total = await self.collection.count_documents({})
 
         return PaginatedResponse[School](
             items=schools,
@@ -42,18 +47,19 @@ class MongoSchoolRepository(ISchoolRepository):
             page=page,
             page_size=page_size,
         )
-    
+
     async def get_by_id(self, school_id: str) -> Optional[School]:
-        query = {"_id": school_id}
+        document = None
 
-        if ObjectId.is_valid(school_id):
-            query = {"_id": ObjectId(school_id)}
+        try:
+            document = await self.collection.find_one({"_id": ObjectId(school_id)})
+        except InvalidId:
+            document = None
 
-        document = await self.collection.find_one(query)
+        if document is None:
+            document = await self.collection.find_one({"_id": school_id})
 
-        if not document and ObjectId.is_valid(school_id):
-             document = await self.collection.find_one({"_id": school_id})
-
-        if not document:
+        if document is None:
             return None
+
         return MongoSchoolMapper.to_domain(document)

@@ -1,6 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-import os
 import logging
+
+from .app_config import config
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +18,13 @@ class MongoDB:
         Returns True if successful, False otherwise
         """
         try:
-            mongo_uri = os.getenv("MONGO_URI")
+            mongo_uri = config.mongo_uri
             if not mongo_uri:
-                logger.error("MONGO_URI environment variable is not set")
+                logger.error("Mongo URI is not configured")
                 return False
 
             self.client = AsyncIOMotorClient(mongo_uri)
-            self.database = self.client.get_database("alpargatas_insight_db")
+            self.database = self.client.get_database(config.database_name)
 
             await self.client.admin.command('ping')
 

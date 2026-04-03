@@ -23,5 +23,5 @@ class Container(containers.DeclarativeContainer):
         GetSchoolById,
         school_repository=school_repository
     )
-    
+
 container = Container()

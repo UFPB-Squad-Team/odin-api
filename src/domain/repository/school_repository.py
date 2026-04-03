@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from uuid import UUID
 
 from src.domain.entities.school import School
 from src.domain.value_objects.pagination import PaginatedResponse
@@ -111,10 +110,10 @@ class ISchoolRepository(ABC):
     """
     
     @abstractmethod
-    async def get_by_id(self, school_id: UUID) -> Optional[School]:
-        '''
-        Retrieves a single school by its unique identifier (UUID).
-        '''
+    async def get_by_id(self, school_id: str) -> Optional[School]:
+        """
+        Retrieves a single school by its unique identifier.
+        """
         ...
 
     @abstractmethod

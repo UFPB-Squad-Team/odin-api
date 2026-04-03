@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, Query, Depends, HTTPException
 from src.domain.entities.school import School
 from src.application.school.list_all_schools.list_all_schools import (
     ListAllSchools,
@@ -9,6 +9,7 @@ from src.application.school.list_all_schools.list_all_schools_dto import (
 )
 from typing import List
 from pydantic import BaseModel
+from src.infrastructure.database.config.app_config import config
 
 
 class PaginatedSchoolResponse(BaseModel):
@@ -32,12 +33,7 @@ class ListAllSchoolsController:
     ):
         dto = ListSchoolsDTO(page=page, page_size=page_size)
 
-        result = await self.list_all_schools_use_case.execute(dto=dto)
-
-        if not result.items:
-            raise HTTPException(status_code=404, detail="Schools not found")
-
-        return result
+        return await self.list_all_schools_use_case.execute(dto=dto)
 
 
 router = APIRouter()
@@ -46,11 +42,21 @@ router = APIRouter()
 @router.get("/all", response_model=PaginatedSchoolResponse)
 async def list_all_schools(
     page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1),
+    page_size: int = Query(10, ge=1, le=config.max_page_size),
     list_all_schools_use_case: ListAllSchools = Depends(
         get_list_all_schools_use_case
     ),
 ):
+
+    offset = (page - 1) * page_size
+    if offset > config.max_offset_records:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Requested page is too deep for offset pagination. "
+                "Use smaller page values or filters."
+            ),
+        )
 
     controller = ListAllSchoolsController(list_all_schools_use_case)
 
