@@ -9,6 +9,7 @@ SCHOOL_QUERY_FIELDS = [
     "dependencia_adm",
     "tipo_localizacao",
     "municipio_id_ibge",
+    "bairro",
 ]
 
 SCHOOL_ALLOWED_FILTERS = {
@@ -20,4 +21,5 @@ SCHOOL_ALLOWED_FILTERS = {
     "dependencia_adm": AllowedFilter(caster=to_str, operators=["eq", "in"]),
     "tipo_localizacao": AllowedFilter(caster=to_str, operators=["eq", "in"]),
     "municipio_id_ibge": AllowedFilter(caster=to_str, operators=["eq", "in"]),
+    "bairro": AllowedFilter(caster=to_str, operators=["eq", "contains", "startswith", "endswith"]),
 }

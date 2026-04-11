@@ -1,4 +1,3 @@
-from typing import Dict
 from uuid import uuid4
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from ..enums.enum_dependencia_administrativa import DependenciaAdministrativa
@@ -9,6 +8,8 @@ from ..validators.school_validation import (
 )
 from src.domain.value_objects.location import Location
 from src.domain.value_objects.indicators import Indicadores
+from src.domain.value_objects.infraestrutura import Infraestrutura
+from src.domain.value_objects.endereco import Endereco
 
 
 class School(BaseModel):
@@ -26,8 +27,9 @@ class School(BaseModel):
     dependencia_adm: DependenciaAdministrativa
     tipo_localizacao: TipoLocalizacao
     localizacao: Location
+    endereco: Endereco = Field(default_factory=Endereco)
     indicadores: Indicadores = Field(default_factory=Indicadores)
-    infraestrutura: Dict[str, bool] = Field(default_factory=dict)
+    infraestrutura: Infraestrutura = Field(default_factory=Infraestrutura)
 
     @model_validator(mode="after")
     def validate_domain(self):
@@ -40,6 +42,7 @@ class School(BaseModel):
             dependencia_adm=self.dependencia_adm,
             tipo_localizacao=self.tipo_localizacao,
             localizacao=self.localizacao,
+            endereco=self.endereco,
             indicadores=self.indicadores,
             infraestrutura=self.infraestrutura,
         )

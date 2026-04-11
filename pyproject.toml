@@ -11,7 +11,7 @@ packages = [
 ]
 
 [tool.poetry.scripts]
-dev = "python src/server.py"
+dev = "src.server:run"
 
 [tool.poetry.dependencies]
 python = "^3.12"
