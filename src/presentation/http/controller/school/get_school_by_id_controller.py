@@ -29,7 +29,7 @@ router = APIRouter()
 
 @router.get("/{school_id}", response_model=School)
 async def get_school_by_id(
-    school_id: str = Path(..., description="The unique UUID of the school"),
+    school_id: str = Path(..., description="The unique identifier of the school"),
     get_school_by_id_use_case: GetSchoolById = Depends(
         get_school_by_id_use_case
     ),

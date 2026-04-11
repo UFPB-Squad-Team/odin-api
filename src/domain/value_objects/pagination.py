@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generic, TypeVar, List
+from typing import Generic, TypeVar, List, Optional
 from math import ceil
 
 # This TypeVar ("T") allows our class to be generic.
@@ -22,6 +22,7 @@ class PaginatedResponse(Generic[T]):
     # --- Data for the current page ---
     total_items: int
     items: List[T]
+    next_cursor: Optional[str] = None
 
     @property
     def total_pages(self) -> int:

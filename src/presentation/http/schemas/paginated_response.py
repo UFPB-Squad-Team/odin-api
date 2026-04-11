@@ -1,0 +1,15 @@
+from typing import Generic, List, TypeVar
+
+from pydantic import BaseModel, ConfigDict
+
+T = TypeVar("T")
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    model_config = ConfigDict(from_attributes=True)
+
+    items: List[T]
+    total_items: int
+    page: int
+    page_size: int
+    next_cursor: str | None = None
