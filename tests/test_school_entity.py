@@ -24,7 +24,8 @@ def test_school_builds_with_defaults():
 
     assert school.id
     assert school.indicadores.totalAlunos == 0
-    assert school.infraestrutura == {}
+    assert school.endereco.bairro == ""
+    assert school.infraestrutura.internet.possuiInternet is False
 
 
 def test_school_rejects_invalid_ibge_code():

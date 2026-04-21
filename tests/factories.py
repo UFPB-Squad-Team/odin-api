@@ -19,8 +19,14 @@ def build_school() -> School:
         dependencia_adm=DependenciaAdministrativa.MUNICIPAL,
         tipo_localizacao=TipoLocalizacao.URBANA,
         localizacao=Location(type="Point", coordinates=(-34.86, -7.12)),
+        endereco={"bairro": "Centro"},
         indicadores=Indicadores(totalAlunos=120),
-        infraestrutura={"agua": True},
+        infraestrutura={
+            "possuiAguaPotavel": True,
+            "equipamentos": {"desktopAluno": True},
+            "internet": {"possuiInternet": True},
+            "salas": {"acessiveis": 1, "climatizadas": 2, "utilizadas": 2},
+        },
     )
 
 
@@ -35,8 +41,14 @@ def build_school_document(document_id: str = "school-1"):
         "dependenciaAdm": "Municipal",
         "tipoLocalizacao": "Urbana",
         "localizacao": {"type": "Point", "coordinates": [-34.86, -7.12]},
+        "endereco": {"bairro": "Centro", "municipio": "Joao Pessoa", "uf": "PB"},
         "indicadores": {"totalAlunos": 120},
-        "infraestrutura": {"agua": True},
+        "infraestrutura": {
+            "possuiAguaPotavel": True,
+            "equipamentos": {"desktopAluno": True},
+            "internet": {"possuiInternet": True},
+            "salas": {"acessiveis": 1, "climatizadas": 2, "utilizadas": 2},
+        },
     }
 
 
@@ -66,11 +78,24 @@ class FakeCursor:
         return self.documents[:length]
 
 
+class FakeAggregateCursor:
+    def __init__(self, documents):
+        self.documents = list(documents)
+
+    async def to_list(self, length):
+        if length is None:
+            return list(self.documents)
+        return self.documents[:length]
+
+
 class FakeCollection:
     def __init__(self, documents):
         self.documents = list(documents)
         self.find_args = None
         self.cursor = FakeCursor(self.documents)
+        self.aggregate_documents = list(documents)
+        self.aggregate_pipeline = None
+        self.aggregate_kwargs = None
         self.count_query = None
         self.estimated_count_called = False
         self.find_one_queries = []
@@ -95,3 +120,8 @@ class FakeCollection:
     async def estimated_document_count(self):
         self.estimated_count_called = True
         return len(self.documents)
+
+    def aggregate(self, pipeline, **kwargs):
+        self.aggregate_pipeline = pipeline
+        self.aggregate_kwargs = kwargs
+        return FakeAggregateCursor(self.aggregate_documents)

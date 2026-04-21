@@ -10,5 +10,7 @@ def test_mapper_converts_mongo_document_into_school():
     assert school.municipio_id_ibge == "1234567"
     assert school.escola_id_inep == 12345678
     assert school.escola_nome == "Escola A"
+    assert school.endereco.bairro == "Centro"
     assert school.indicadores.totalAlunos == 120
-    assert school.infraestrutura == {"agua": True}
+    assert school.infraestrutura.possuiAguaPotavel is True
+    assert school.infraestrutura.equipamentos.desktopAluno is True

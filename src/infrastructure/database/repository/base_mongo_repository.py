@@ -22,12 +22,14 @@ class BaseMongoRepository(ABC, Generic[T]):
         field_map: Dict[str, str],
         required_projection_fields: Optional[List[str]] = None,
         default_sort_field: str,
+        use_estimated_total_for_unfiltered: bool = False,
     ):
         self.collection = collection
         self.mapper_to_domain = mapper_to_domain
         self.field_map = field_map
         self.required_projection_fields = required_projection_fields or []
         self.default_sort_field = default_sort_field
+        self.use_estimated_total_for_unfiltered = use_estimated_total_for_unfiltered
 
     async def get_by_id(self, entity_id: str) -> Optional[T]:
         document = None
@@ -81,7 +83,7 @@ class BaseMongoRepository(ABC, Generic[T]):
             page_docs = await cursor.to_list(length=limit)
             next_cursor = None
 
-        total_items = await self.collection.count_documents(filters_query)
+        total_items = await self._resolve_total_items(filters_query)
         items = [self.mapper_to_domain(doc) for doc in page_docs]
 
         return PaginatedResponse[T](
@@ -91,6 +93,11 @@ class BaseMongoRepository(ABC, Generic[T]):
             page_size=limit,
             next_cursor=next_cursor,
         )
+
+    async def _resolve_total_items(self, filters_query: Dict[str, Any]) -> int:
+        if self.use_estimated_total_for_unfiltered and not filters_query:
+            return await self.collection.estimated_document_count()
+        return await self.collection.count_documents(filters_query)
 
     def _build_filters(self, filters: List[QueryFilter]) -> Dict[str, Any]:
         if not filters:

@@ -1,7 +1,9 @@
-from typing import Optional, Dict
+from typing import Optional
 from src.domain.exeptions.validation_error import DomainValidationError
 from ..value_objects.location import Location
 from ..value_objects.indicators import Indicadores
+from ..value_objects.infraestrutura import Infraestrutura
+from ..value_objects.endereco import Endereco
 from ..enums.enum_uf import UF
 from ..enums.enum_dependencia_administrativa import DependenciaAdministrativa
 from ..enums.enum_tipo_localizacao import TipoLocalizacao
@@ -18,8 +20,9 @@ class SchoolValidator:
         dependencia_adm: DependenciaAdministrativa,
         tipo_localizacao: TipoLocalizacao,
         localizacao: Location,
+        endereco: Endereco,
         indicadores: Optional[Indicadores],
-        infraestrutura: Optional[Dict[str, bool]] = None,
+        infraestrutura: Optional[Infraestrutura] = None,
     ):
         self._municipio_id_ibge = municipio_id_ibge
         self._escola_id_inep = escola_id_inep
@@ -29,6 +32,7 @@ class SchoolValidator:
         self._dependencia_adm = dependencia_adm
         self._tipo_localizacao = tipo_localizacao
         self._localizacao = localizacao
+        self._endereco = endereco
         self._indicadores = indicadores
         self._infraestrutura = infraestrutura
 
@@ -43,6 +47,7 @@ class SchoolValidator:
         self._validate_nome()
         self._validate_municipio_nome()
         self._validate_location()
+        self._validate_endereco()
         self._validate_indicadores()
         self._validate_infraestrutura()
 
@@ -97,20 +102,52 @@ class SchoolValidator:
             )
 
     def _validate_indicadores(self):
-        """Validates the optional Indicadores dataclass."""
-        if self._indicadores:
-            if self._indicadores.totalAlunos < 0:
+        """Validates the updated Indicadores structure with education stages."""
+        if not self._indicadores:
+            return
+
+        if self._indicadores.totalAlunos < 0:
+            raise DomainValidationError("indicadores.totalAlunos cannot be negative.")
+
+        if self._indicadores.anoReferencia < 1900:
+            raise DomainValidationError("indicadores.anoReferencia is invalid.")
+
+        etapas = [
+            ("Educação Infantil", self._indicadores.educacaoInfantil),
+            ("Anos Iniciais", self._indicadores.fundamentalAnosIniciais),
+            ("Anos Finais", self._indicadores.fundamentalAnosFinais),
+            ("Ensino Médio", self._indicadores.ensinoMedio),
+        ]
+
+        for nome_etapa, dados in etapas:
+            self._validar_metricas_etapa(nome_etapa, dados)
+
+    def _validar_metricas_etapa(self, nome: str, dados):
+        """Helper para validar as taxas e médias de cada etapa de ensino."""
+        if dados.alunosPorTurma < 0:
+            raise DomainValidationError(f"indicadores.{nome}: alunosPorTurma cannot be negative.")
+        
+        taxas = [
+            ("taxaAprovacao", dados.taxaAprovacao),
+            ("taxaReprovacao", dados.taxaReprovacao),
+            ("tnr", dados.tnr)
+        ]
+
+        for campo, valor in taxas:
+            if not (0 <= valor <= 100):
                 raise DomainValidationError(
-                    "indicadores.totalAlunos cannot be negative."
+                    f"indicadores.{nome}: {campo} must be between 0 and 100. Received: {valor}"
                 )
+        
+        if dados.horasAulaDiarias < 0:
+             raise DomainValidationError(f"indicadores.{nome}: horasAulaDiarias cannot be negative.")
+
+    def _validate_endereco(self):
+        if self._endereco is None:
+            raise DomainValidationError("endereco is required.")
 
     def _validate_infraestrutura(self):
-        """Validates the optional infraestrutura dictionary."""
-        if self._infraestrutura:
-            for key, value in self._infraestrutura.items():
-                if not key or not isinstance(key, str):
-                    raise DomainValidationError(f"Invalid infrastructure key: {key}.")
-                if not isinstance(value, bool):
-                    raise DomainValidationError(
-                        f"The value for infrastructure key '{key}' must be a boolean. Got '{type(value)}'."
-                    )
+        if self._infraestrutura and self._infraestrutura.salas.utilizadas < 0:
+            raise DomainValidationError(
+                "infraestrutura.salas.utilizadas cannot be negative."
+            )

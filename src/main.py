@@ -16,6 +16,7 @@ load_dotenv()
 container.wire(modules=[
     "src.presentation.http.controller.school.list_all_schools_controller",
     "src.presentation.http.controller.school.get_school_by_id_controller",
+    "src.presentation.http.controller.school.geojson_controller",
 ])
 
 

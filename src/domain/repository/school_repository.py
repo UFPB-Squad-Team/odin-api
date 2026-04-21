@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from src.domain.entities.school import School
 from src.domain.repository.base_repository import IBaseReadRepository
@@ -130,4 +130,19 @@ class ISchoolRepository(IBaseReadRepository[School], ABC):
         """
         Retrieves schools using dynamic filters, sort and projection.
         """
+        ...
+
+    @abstractmethod
+    async def get_paraiba_geojson(self) -> Dict[str, Any]:
+        """Returns all schools in Paraiba as a GeoJSON FeatureCollection."""
+        ...
+
+    @abstractmethod
+    async def get_bairros_geojson(self, municipio: str) -> Dict[str, Any]:
+        """Returns bairros in a city as aggregated GeoJSON features."""
+        ...
+
+    @abstractmethod
+    async def get_bairro_by_school_id(self, school_id: str) -> Dict[str, Any] | None:
+        """Returns bairro information for a school id."""
         ...

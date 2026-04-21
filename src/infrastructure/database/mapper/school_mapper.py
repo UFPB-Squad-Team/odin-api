@@ -2,6 +2,8 @@ from typing import List, Dict, Any
 from src.domain.entities.school import School
 from src.domain.value_objects.location import Location
 from src.domain.value_objects.indicators import Indicadores
+from src.domain.value_objects.infraestrutura import Infraestrutura
+from src.domain.value_objects.endereco import Endereco
 
 MONGO_TO_DOMAIN_MAP = {
     '_id': 'id',
@@ -13,6 +15,7 @@ MONGO_TO_DOMAIN_MAP = {
     'dependenciaAdm': 'dependencia_adm',
     'tipoLocalizacao': 'tipo_localizacao',
     'localizacao': 'localizacao',
+    'endereco': 'endereco',
     'indicadores': 'indicadores',
     'infraestrutura': 'infraestrutura',
 }
@@ -57,11 +60,24 @@ class MongoSchoolMapper:
             domain_data['localizacao'] = Location(**domain_data['localizacao'])
 
         if (
-            'indicadores' in domain_data
-            and isinstance(domain_data['indicadores'], dict)
+        'indicadores' in domain_data 
+        and isinstance(domain_data['indicadores'], dict)
         ):
             indicadores_data = domain_data['indicadores']
+            
             domain_data['indicadores'] = Indicadores(**indicadores_data)
+
+        if (
+            'endereco' in domain_data
+            and isinstance(domain_data['endereco'], dict)
+        ):
+            domain_data['endereco'] = Endereco(**domain_data['endereco'])
+
+        if (
+            'infraestrutura' in domain_data
+            and isinstance(domain_data['infraestrutura'], dict)
+        ):
+            domain_data['infraestrutura'] = Infraestrutura(**domain_data['infraestrutura'])
 
         return School(**domain_data)
 

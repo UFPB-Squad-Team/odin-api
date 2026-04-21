@@ -14,6 +14,7 @@ SCHOOL_ALLOWED_FILTER_FIELDS = {
     "dependencia_adm",
     "tipo_localizacao",
     "municipio_id_ibge",
+    "bairro",
 }
 
 SCHOOL_ALLOWED_SORT_FIELDS = SCHOOL_ALLOWED_FILTER_FIELDS
