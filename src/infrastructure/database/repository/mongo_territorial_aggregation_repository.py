@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from src.domain.repository.territorial_aggregation_repository import (
@@ -22,18 +23,37 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
         self.bairro_collection = bairro_collection
         self.setor_collection = setor_collection
 
-    async def get_cities(self, co_municipio: str | None = None) -> dict[str, Any]:
+    async def get_cities(
+        self,
+        co_municipio: str | None = None,
+        sg_uf: str | None = None,
+    ) -> dict[str, Any]:
+        normalized_uf = sg_uf.upper() if sg_uf else None
+
         if co_municipio:
-            primary_doc = await self.municipio_collection.find_one(
-                {
-                    "$or": [
-                        {"co_municipio": co_municipio},
-                        {"municipioIdIbge": co_municipio},
-                        {"municipio_id_ibge": co_municipio},
-                        {"idIbge": co_municipio},
+            query: dict[str, Any] = {
+                "$or": [
+                    {"co_municipio": co_municipio},
+                    {"municipioIdIbge": co_municipio},
+                    {"municipio_id_ibge": co_municipio},
+                    {"idIbge": co_municipio},
+                ]
+            }
+            if normalized_uf:
+                query = {
+                    "$and": [
+                        query,
+                        {
+                            "$or": [
+                                {"sg_uf": normalized_uf},
+                                {"uf": normalized_uf},
+                                {"estado_sigla": normalized_uf},
+                            ]
+                        },
                     ]
                 }
-            )
+
+            primary_doc = await self.municipio_collection.find_one(query)
 
             if primary_doc:
                 city = TerritorialAggregationMapper.city_from_doc(
@@ -45,7 +65,10 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                     "features": [TerritorialAggregationMapper.city_to_feature(city)],
                 }
 
-            fallback_docs = await self._aggregate_city_from_setor(co_municipio)
+            fallback_docs = await self._aggregate_city_from_setor(
+                co_municipio=co_municipio,
+                sg_uf=normalized_uf,
+            )
             cities = [
                 TerritorialAggregationMapper.city_from_doc(
                     doc,
@@ -61,7 +84,17 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                 ],
             }
 
-        docs = await self.municipio_collection.find({}).to_list(length=None)
+        list_query: dict[str, Any] = {}
+        if normalized_uf:
+            list_query = {
+                "$or": [
+                    {"sg_uf": normalized_uf},
+                    {"uf": normalized_uf},
+                    {"estado_sigla": normalized_uf},
+                ]
+            }
+
+        docs = await self.municipio_collection.find(list_query).to_list(length=None)
         cities = [
             TerritorialAggregationMapper.city_from_doc(
                 doc,
@@ -109,73 +142,6 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
             for doc in fallback_docs
         ]
 
-    async def get_neighborhoods(
-        self,
-        co_municipio: str,
-        bairro: str | None = None,
-    ) -> dict[str, Any]:
-        # Build query for municipality matching (flexible with multiple field name variations)
-        municipio_query: list[dict[str, Any]] = [
-            {"co_municipio": co_municipio},
-            {"municipioIdIbge": co_municipio},
-            {"municipio_id_ibge": co_municipio},
-            {"idIbge": co_municipio},
-        ]
-        
-        query: dict[str, Any] = {"$or": municipio_query}
-        
-        # Add optional neighborhood filter (also flexible)
-        if bairro:
-            bairro_query: list[dict[str, Any]] = [
-                {"bairro": {"$regex": bairro, "$options": "i"}},
-                {"nm_bairro": {"$regex": bairro, "$options": "i"}},
-                {"nome_area": {"$regex": bairro, "$options": "i"}},
-            ]
-            query = {
-                "$and": [
-                    {"$or": municipio_query},
-                    {"$or": bairro_query},
-                ]
-            }
-
-        primary_docs = await self.bairro_collection.find(query).to_list(length=None)
-
-        if primary_docs:
-            neighborhoods = [
-                TerritorialAggregationMapper.neighborhood_from_doc(
-                    doc,
-                    source="bairro_indicadores",
-                )
-                for doc in primary_docs
-            ]
-            return {
-                "type": "FeatureCollection",
-                "features": [
-                    TerritorialAggregationMapper.neighborhood_to_feature(item)
-                    for item in neighborhoods
-                ],
-            }
-
-        fallback_docs = await self._aggregate_neighborhoods_from_setor(
-            co_municipio=co_municipio,
-            bairro=bairro,
-        )
-        neighborhoods = [
-            TerritorialAggregationMapper.neighborhood_from_doc(
-                doc,
-                source="setor_indicadores",
-            )
-            for doc in fallback_docs
-        ]
-
-        return {
-            "type": "FeatureCollection",
-            "features": [
-                TerritorialAggregationMapper.neighborhood_to_feature(item)
-                for item in neighborhoods
-            ],
-        }
-
     async def _find_neighborhood_docs(
         self,
         *,
@@ -211,15 +177,34 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
 
         return await self.bairro_collection.find(query).to_list(length=None)
 
-    async def _aggregate_city_from_setor(self, co_municipio: str) -> list[dict[str, Any]]:
-        pipeline = [
+    async def _aggregate_city_from_setor(
+        self,
+        *,
+        co_municipio: str,
+        sg_uf: str | None,
+    ) -> list[dict[str, Any]]:
+        match_conditions: list[dict[str, Any]] = [
             {
-                "$match": {
+                "$or": [
+                    {"co_municipio": co_municipio},
+                    {"municipioIdIbge": co_municipio},
+                ]
+            }
+        ]
+        if sg_uf:
+            match_conditions.append(
+                {
                     "$or": [
-                        {"co_municipio": co_municipio},
-                        {"municipioIdIbge": co_municipio},
+                        {"sg_uf": sg_uf},
+                        {"uf": sg_uf},
+                        {"estado_sigla": sg_uf},
                     ]
                 }
+            )
+
+        pipeline = [
+            {
+                "$match": {"$and": match_conditions}
             },
             {
                 "$project": {
@@ -421,7 +406,16 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
         ]
 
         if bairro:
-            pipeline.append({"$match": {"bairro_resolvido": bairro}})
+            pipeline.append(
+                {
+                    "$match": {
+                        "bairro_resolvido": {
+                            "$regex": re.escape(bairro),
+                            "$options": "i",
+                        }
+                    }
+                }
+            )
 
         pipeline.extend(
             [

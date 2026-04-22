@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from src.application.aggregation.get_city_aggregations import GetCityAggregations
 from src.application.aggregation.get_neighborhood_aggregations import (
@@ -33,9 +33,18 @@ async def get_city_aggregations(
         max_length=7,
         description="IBGE municipality code (7 digits). Primary data source: municipio_indicadores. Fallback to setor_indicadores if not found.",
     ),
+    sg_uf: str | None = Query(
+        default=None,
+        min_length=2,
+        max_length=2,
+        description="Optional UF filter (e.g., PB). Applied when listing cities and combined with municipioIdIbge when provided.",
+    ),
     use_case: GetCityAggregations = Depends(get_city_aggregations_use_case),
 ):
-    return await use_case.execute(co_municipio=municipioIdIbge)
+    return await use_case.execute(
+        co_municipio=municipioIdIbge,
+        sg_uf=sg_uf.upper() if sg_uf else None,
+    )
 
 
 @router.get(
@@ -61,6 +70,7 @@ async def get_neighborhood_aggregations(
         min_length=7,
         max_length=7,
         description="Legacy alias for municipio_id.",
+        deprecated=True,
     ),
     bairro: str | None = Query(
         default=None,
@@ -76,6 +86,12 @@ async def get_neighborhood_aggregations(
     ),
 ):
     resolved_municipio_id = municipio_id or municipioIdIbge
+    if not resolved_municipio_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="One of municipio_id or municipioIdIbge is required.",
+        )
+
     return await use_case.execute(
         municipio_id_ibge=resolved_municipio_id,
         bairro=bairro,

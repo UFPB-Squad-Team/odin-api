@@ -115,8 +115,46 @@ async def test_get_cities_uses_setor_fallback_when_primary_missing():
     assert feature["geometry"]["coordinates"] == [-34.85, -7.11]
     assert setor_collection.last_aggregate_pipeline is not None
     assert {
-        "co_municipio": "2507507"
-    } in setor_collection.last_aggregate_pipeline[0]["$match"]["$or"]
+        "$or": [
+            {"co_municipio": "2507507"},
+            {"municipioIdIbge": "2507507"},
+        ]
+    } in setor_collection.last_aggregate_pipeline[0]["$match"]["$and"]
+
+
+@pytest.mark.asyncio
+async def test_get_cities_filters_list_by_sg_uf():
+    municipio_collection = FakeCollection(
+        find_docs=[
+            {
+                "co_municipio": "2507507",
+                "municipio": "Joao Pessoa",
+                "sg_uf": "PB",
+                "total_escolas": 100,
+                "total_alunos": 50000,
+                "centroide": {"type": "Point", "coordinates": [-34.86, -7.12]},
+            }
+        ]
+    )
+    bairro_collection = FakeCollection()
+    setor_collection = FakeCollection()
+
+    repository = MongoTerritorialAggregationRepository(
+        municipio_collection=municipio_collection,
+        bairro_collection=bairro_collection,
+        setor_collection=setor_collection,
+    )
+
+    result = await repository.get_cities(sg_uf="pb")
+
+    assert len(result["features"]) == 1
+    assert municipio_collection.last_find_query == {
+        "$or": [
+            {"sg_uf": "PB"},
+            {"uf": "PB"},
+            {"estado_sigla": "PB"},
+        ]
+    }
 
 
 @pytest.mark.asyncio
@@ -213,6 +251,43 @@ async def test_get_by_municipio_uses_setor_fallback_when_bairro_collection_missi
     assert item["source"] == "setor_indicadores"
     first_match = setor_collection.last_aggregate_pipeline[0]["$match"]["$or"]
     assert {"co_municipio": {"$in": ["2507507", 2507507]}} in first_match
+
+
+@pytest.mark.asyncio
+async def test_get_by_municipio_uses_regex_filter_in_setor_fallback():
+    municipio_collection = FakeCollection()
+    bairro_collection = FakeCollection(find_docs=[])
+    setor_collection = FakeCollection(
+        aggregate_docs=[
+            {
+                "co_municipio": "2507507",
+                "municipio": "Joao Pessoa",
+                "bairro": "Alto do Mateus",
+                "tem_bairro_official": True,
+                "total_escolas": 1,
+                "total_alunos": 100,
+                "avg_lon": -34.83,
+                "avg_lat": -7.10,
+            }
+        ]
+    )
+
+    repository = MongoTerritorialAggregationRepository(
+        municipio_collection=municipio_collection,
+        bairro_collection=bairro_collection,
+        setor_collection=setor_collection,
+    )
+
+    await repository.get_by_municipio(municipio_id_ibge="2507507", bairro="mate")
+
+    regex_stages = [
+        stage
+        for stage in setor_collection.last_aggregate_pipeline
+        if "$match" in stage and "bairro_resolvido" in stage["$match"]
+    ]
+    assert regex_stages
+    assert regex_stages[0]["$match"]["bairro_resolvido"]["$regex"] == "mate"
+    assert regex_stages[0]["$match"]["bairro_resolvido"]["$options"] == "i"
 
 
 @pytest.mark.asyncio

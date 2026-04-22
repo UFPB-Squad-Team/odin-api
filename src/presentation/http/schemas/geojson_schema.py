@@ -49,31 +49,6 @@ class BairroGeoJsonFeatureCollection(BaseModel):
     features: list[BairroGeoJsonFeature]
 
 
-class MunicipioGeoJsonProperties(BaseModel):
-    municipio_nome: str
-    municipio_id_ibge: str
-    estado_sigla: str
-    total_escolas: int
-    total_alunos: int
-    percentual_internet: float = 0.0
-    percentual_biblioteca: float = 0.0
-    percentual_laboratorio: float = 0.0
-    percentual_quadra: float = 0.0
-    percentual_acessibilidade_pcd: float = 0.0
-
-
-class MunicipioGeoJsonFeature(BaseModel):
-    type: Literal["Feature"]
-    id: str
-    geometry: GeoJsonPointGeometry
-    properties: MunicipioGeoJsonProperties
-
-
-class MunicipioGeoJsonFeatureCollection(BaseModel):
-    type: Literal["FeatureCollection"]
-    features: list[MunicipioGeoJsonFeature]
-
-
 class BairroBySchoolResponse(BaseModel):
     id: str
     escola_id_inep: int | None = None

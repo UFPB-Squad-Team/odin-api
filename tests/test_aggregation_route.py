@@ -9,8 +9,13 @@ from src.presentation.http.controller.aggregation.callable.aggregation_callable 
 
 
 class FakeGetCityAggregationsUseCase:
-    async def execute(self, co_municipio: str | None = None):
+    async def execute(
+        self,
+        co_municipio: str | None = None,
+        sg_uf: str | None = None,
+    ):
         source = "setor_indicadores" if co_municipio == "2507507" else "municipio_indicadores"
+        resolved_uf = sg_uf or "PB"
         return {
             "type": "FeatureCollection",
             "features": [
@@ -22,7 +27,7 @@ class FakeGetCityAggregationsUseCase:
                         "municipioIdIbge": co_municipio or "2507507",
                         "co_municipio": co_municipio or "2507507",
                         "municipio": "Joao Pessoa",
-                        "uf": "PB",
+                        "uf": resolved_uf,
                         "total_escolas": 123,
                         "total_alunos": 45678,
                         "avg_ideb": 5.1,
@@ -153,3 +158,55 @@ async def test_get_neighborhood_aggregations_route_can_include_geometria(monkeyp
     assert response.status_code == 200
     payload = response.json()
     assert payload[0]["geometria"]["type"] == "Point"
+
+
+@pytest.mark.asyncio
+async def test_get_city_aggregations_route_accepts_sg_uf_filter(monkeypatch):
+    async def fake_connect():
+        return True
+
+    async def fake_disconnect():
+        return None
+
+    from src.infrastructure.database.config.connect_db import mongodb
+
+    monkeypatch.setattr(mongodb, "connect", fake_connect)
+    monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    app.dependency_overrides[get_city_aggregations_use_case] = (
+        lambda: FakeGetCityAggregationsUseCase()
+    )
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/v1/aggregations/cities?sg_uf=pb")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["features"][0]["properties"]["uf"] == "PB"
+
+
+@pytest.mark.asyncio
+async def test_get_neighborhood_aggregations_route_requires_city_param(monkeypatch):
+    async def fake_connect():
+        return True
+
+    async def fake_disconnect():
+        return None
+
+    from src.infrastructure.database.config.connect_db import mongodb
+
+    monkeypatch.setattr(mongodb, "connect", fake_connect)
+    monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    app.dependency_overrides[get_neighborhood_aggregations_use_case] = (
+        lambda: FakeGetNeighborhoodAggregationsUseCase()
+    )
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/v1/aggregations/neighborhoods")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 422

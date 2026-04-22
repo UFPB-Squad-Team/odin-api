@@ -4,7 +4,11 @@ from typing import Any
 
 class ITerritorialAggregationRepository(ABC):
     @abstractmethod
-    async def get_cities(self, co_municipio: str | None = None) -> dict[str, Any]:
+    async def get_cities(
+        self,
+        co_municipio: str | None = None,
+        sg_uf: str | None = None,
+    ) -> dict[str, Any]:
         """Returns consolidated city aggregates as GeoJSON FeatureCollection."""
         ...
 

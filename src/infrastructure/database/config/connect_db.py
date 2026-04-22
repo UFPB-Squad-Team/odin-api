@@ -90,21 +90,27 @@ class MongoDB:
 
         # Indexes for territorial aggregation endpoints and fallback.
         # Handle potential conflicts from previously created indexes
-        await self._create_or_replace_index(
-            municipios,
-            [("co_municipio", ASCENDING)],
-            "idx_municipio_indicadores_co_municipio",
-        )
-        await self._create_or_replace_index(
-            bairros,
-            [("co_municipio", ASCENDING), ("bairro", ASCENDING)],
-            "idx_bairro_indicadores_co_municipio_bairro",
-        )
-        await self._create_or_replace_index(
-            setores,
-            [("co_municipio", ASCENDING)],
-            "idx_setor_indicadores_co_municipio",
-        )
+        municipio_fields = ["co_municipio", "municipioIdIbge", "municipio_id_ibge", "idIbge"]
+        for field in municipio_fields:
+            await self._create_or_replace_index(
+                municipios,
+                [(field, ASCENDING)],
+                f"idx_municipio_indicadores_{field}",
+            )
+            await self._create_or_replace_index(
+                setores,
+                [(field, ASCENDING)],
+                f"idx_setor_indicadores_{field}",
+            )
+
+        bairro_search_fields = ["bairro", "nm_bairro", "nome_area"]
+        for municipio_field in municipio_fields:
+            for bairro_field in bairro_search_fields:
+                await self._create_or_replace_index(
+                    bairros,
+                    [(municipio_field, ASCENDING), (bairro_field, ASCENDING)],
+                    f"idx_bairro_indicadores_{municipio_field}_{bairro_field}",
+                )
 
     async def _create_or_replace_index(
         self,
@@ -127,15 +133,13 @@ class MongoDB:
                     f"Index with similar key exists; dropping old index and recreating: {index_name}"
                 )
                 try:
-                    # Get the key field names from index_spec
-                    keys = [field for field, _ in index_spec]
-                    # Drop all indexes on these keys except the one we want to create
+                    desired_key_pairs = list(index_spec)
+                    # Drop indexes with the same key pattern except the one we want to create.
                     indexes = await collection.list_indexes().to_list(length=None)
                     for idx_info in indexes:
                         idx_key = idx_info.get("key")
-                        if idx_key and all(
-                            (key, ASCENDING) in idx_key or (key, 1) in idx_key for key, _ in index_spec
-                        ):
+                        existing_key_pairs = list(idx_key.items()) if idx_key else []
+                        if existing_key_pairs == desired_key_pairs:
                             if idx_info.get("name") != index_name:
                                 await collection.drop_index(idx_info.get("name"))
                                 logger.info(f"Dropped old index: {idx_info.get('name')}")
