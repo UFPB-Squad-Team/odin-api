@@ -6,7 +6,7 @@ from bson.errors import InvalidId
 from src.domain.entities.school import School
 from src.domain.repository.school_repository import ISchoolRepository
 from src.domain.value_objects.pagination import PaginatedResponse
-from src.domain.value_objects.query import QueryOptions, QuerySort
+from src.domain.value_objects.query import QueryOptions, QuerySort, QueryFilter
 from src.infrastructure.database.config.app_config import config
 from ..mapper.school_mapper import MongoSchoolMapper
 from .base_mongo_repository import BaseMongoRepository
@@ -80,11 +80,37 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
         self,
         page: int,
         page_size: int,
+        search_term: str = None, 
+        municipio: str = None, # <-- Recebendo o novo parâmetro
     ) -> PaginatedResponse[School]:
+        
+        filters = []
+        
+        # Filtro da Escola (que você já fez)
+        if search_term:
+            filters.append(
+                QueryFilter(
+                    field="escola_nome", 
+                    operator="eq", 
+                    value={"$regex": f".*{search_term}.*", "$options": "i"}
+                )
+            )
+
+        # Filtro do Município (Exatamente a mesma lógica!)
+        if municipio:
+            filters.append(
+                QueryFilter(
+                    field="municipio_nome", 
+                    operator="eq", 
+                    value={"$regex": f".*{municipio}.*", "$options": "i"}
+                )
+            )
+
         query = QueryOptions(
             page=page,
             page_size=page_size,
             sort=QuerySort(field="escola_id_inep", direction=1),
+            filters=filters 
         )
         return await self.find_paginated(query)
 
