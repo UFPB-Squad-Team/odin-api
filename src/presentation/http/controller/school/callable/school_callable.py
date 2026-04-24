@@ -1,3 +1,4 @@
+from src.application.stats.get_summary_stats_use_case import GetSummaryStatsUseCase
 from ..container import container
 from src.application.school.list_all_schools.list_all_schools import (
     ListAllSchools,
@@ -28,3 +29,9 @@ def get_bairros_geojson_use_case() -> GetBairrosGeoJson:
 
 def get_bairro_by_school_id_use_case() -> GetBairroBySchoolId:
     return container.get_bairro_by_school_id_use_case()
+
+def get_summary_stats_use_case():
+    return container.get_summary_stats_use_case()
+
+def get_summary_stats_use_case() -> GetSummaryStatsUseCase:
+    return container.get_summary_stats_use_case()

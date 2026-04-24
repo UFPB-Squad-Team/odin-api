@@ -10,14 +10,16 @@ from src.presentation.http.middleware.global_exception_handler import (
 )
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+from src.presentation.http.controller.school.stats.stats_controller import router as stats_router
 
-load_dotenv()
 
 container.wire(modules=[
     "src.presentation.http.controller.school.list_all_schools_controller",
     "src.presentation.http.controller.school.get_school_by_id_controller",
     "src.presentation.http.controller.school.geojson_controller",
+    
 ])
+
 
 
 @asynccontextmanager
@@ -48,3 +50,6 @@ app = FastAPI(
 register_global_exception_handlers(app)
 
 app.include_router(school_controller, prefix="/api/v1", tags=["schools"])
+app.include_router(stats_router, prefix="/api/v1", tags=["stats"])
+
+
