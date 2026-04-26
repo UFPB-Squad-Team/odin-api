@@ -1,11 +1,16 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class AggregationPointGeometry(BaseModel):
     type: Literal["Point"]
     coordinates: tuple[float, float]
+
+
+class AggregationGeometry(BaseModel):
+    type: str
+    coordinates: Any
 
 
 class CityAggregationProperties(BaseModel):
@@ -27,7 +32,7 @@ class CityAggregationFeature(BaseModel):
     type: Literal["Feature"]
     mongoId: str | None = None
     id: str
-    geometry: AggregationPointGeometry
+    geometry: AggregationGeometry
     properties: CityAggregationProperties
 
 
@@ -64,11 +69,17 @@ class MongoNeighborhoodAggregation(BaseModel):
     sg_uf: str | None = None
     total_escolas: int
     total_matriculas: int
-    tem_bairro_official: bool | None = None
+    tem_bairro_oficial: bool | None = Field(
+        default=None,
+        validation_alias=AliasChoices("tem_bairro_oficial", "tem_bairro_official"),
+    )
+    nivel: Literal["bairro", "setor"] = "bairro"
+    cd_setor: str | None = None
     source: str
 
 
 class NeighborhoodAggregationProperties(BaseModel):
+    id: str
     municipioIdIbge: str
     co_municipio: str
     bairro: str
@@ -81,7 +92,9 @@ class NeighborhoodAggregationProperties(BaseModel):
     pct_com_internet: float | int | None = None
     pct_com_lab_informatica: float | int | None = None
     pct_sem_acessibilidade: float | int | None = None
-    tem_bairro_official: bool
+    tem_bairro_oficial: bool = Field(serialization_alias="tem_bairro_oficial")
+    nivel: Literal["bairro", "setor"] = "bairro"
+    cd_setor: str | None = None
     source: str
 
 
@@ -89,7 +102,7 @@ class NeighborhoodAggregationFeature(BaseModel):
     type: Literal["Feature"]
     mongoId: str | None = None
     id: str
-    geometry: AggregationPointGeometry
+    geometry: AggregationGeometry
     properties: NeighborhoodAggregationProperties
 
 

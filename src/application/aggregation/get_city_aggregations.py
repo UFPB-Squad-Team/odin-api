@@ -13,8 +13,10 @@ class GetCityAggregations:
         self,
         co_municipio: str | None = None,
         sg_uf: str | None = None,
+        include_geometria: bool = False,
     ) -> dict[str, Any]:
         return await self.repository.get_cities(
             co_municipio=co_municipio,
             sg_uf=sg_uf,
+            include_geometria=include_geometria,
         )

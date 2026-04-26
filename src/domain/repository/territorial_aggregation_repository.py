@@ -8,6 +8,7 @@ class ITerritorialAggregationRepository(ABC):
         self,
         co_municipio: str | None = None,
         sg_uf: str | None = None,
+        include_geometria: bool = False,
     ) -> dict[str, Any]:
         """Returns consolidated city aggregates as GeoJSON FeatureCollection."""
         ...
