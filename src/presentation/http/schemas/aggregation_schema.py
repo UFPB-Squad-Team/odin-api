@@ -13,6 +13,56 @@ class AggregationGeometry(BaseModel):
     coordinates: Any
 
 
+class SocioeconomicoPopulacao(BaseModel):
+    total: int | None = None
+    totalDomiciliosParticulares: int | None = None
+    mediaMoradoresPorDomicilio: float | int | None = None
+
+
+class SocioeconomicoEstruturaEtaria(BaseModel):
+    pctCriancas0a9: float | int | None = None
+    pctIdosos60Mais: float | int | None = None
+
+
+class SocioeconomicoRaca(BaseModel):
+    pctPretaParda: float | int | None = None
+
+
+class SocioeconomicoSaneamento(BaseModel):
+    pctAguaRedeGeral: float | int | None = None
+    pctEsgotoRedeGeral: float | int | None = None
+    pctLixoColetado: float | int | None = None
+
+
+class SocioeconomicoEducacaoPopulacao(BaseModel):
+    taxaAnalfabetismo15Mais: float | int | None = None
+
+
+class SocioeconomicoFamilia(BaseModel):
+    pctResponsavelFeminino: float | int | None = None
+
+
+class Socioeconomico(BaseModel):
+    anoReferencia: int | None = None
+    fonte: str | None = None
+    populacao: SocioeconomicoPopulacao | None = None
+    estruturaEtaria: SocioeconomicoEstruturaEtaria | None = None
+    raca: SocioeconomicoRaca | None = None
+    saneamento: SocioeconomicoSaneamento | None = None
+    educacaoPopulacao: SocioeconomicoEducacaoPopulacao | None = None
+    familia: SocioeconomicoFamilia | None = None
+
+
+class EducacaoMunicipio(BaseModel):
+    totalEscolas: int | None = None
+    totalMatriculas: int | None = None
+    totalBairros: int | None = None
+    pctComInternet: float | int | None = None
+    pctComBiblioteca: float | int | None = None
+    pctComLabInformatica: float | int | None = None
+    pctSemAcessibilidade: float | int | None = None
+
+
 class CityAggregationProperties(BaseModel):
     municipioIdIbge: str
     co_municipio: str
@@ -25,6 +75,8 @@ class CityAggregationProperties(BaseModel):
     pct_com_internet: float | int | None = None
     pct_com_lab_informatica: float | int | None = None
     pct_sem_acessibilidade: float | int | None = None
+    socioeconomico: Socioeconomico | None = None
+    educacao: EducacaoMunicipio | None = None
     source: str
 
 
