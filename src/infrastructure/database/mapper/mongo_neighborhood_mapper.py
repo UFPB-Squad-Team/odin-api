@@ -69,6 +69,8 @@ class MongoNeighborhoodMapper:
             default="",
         )
 
+        cd_setor = cls._pick(doc, "cd_setor", "co_setor", "setor", "id_setor")
+
         total_matriculas = cls._pick(
             doc,
             "total_matriculas",
@@ -78,6 +80,9 @@ class MongoNeighborhoodMapper:
         )
 
         geometry = cls._extract_geometry(doc) if include_geometria else None
+
+        tem_oficial = bool(cls._pick(doc, "tem_bairro_official", "tem_bairro_oficial", default=True))
+        nivel = "setor" if source == "setor_indicadores" else "bairro"
 
         return {
             "_id": str(doc.get("_id")) if doc.get("_id") else None,
@@ -99,6 +104,8 @@ class MongoNeighborhoodMapper:
                 cls._pick(doc, "total_escolas", "qtd_escolas", default=0)
             ),
             "total_matriculas": int(total_matriculas or 0),
-            "tem_bairro_official": tem_bairro_official,
+            "tem_bairro_oficial": tem_oficial,
+            "nivel": nivel,
+            "cd_setor": str(cd_setor) if cd_setor is not None else None,
             "source": source,
         }
