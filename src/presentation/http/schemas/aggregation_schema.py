@@ -41,6 +41,14 @@ class SocioeconomicoEducacaoPopulacao(BaseModel):
 class SocioeconomicoFamilia(BaseModel):
     pctResponsavelFeminino: float | int | None = None
 
+class SocioeconomicoMortalidade(BaseModel):
+    totalObitosDomicilios: float | int | None = None
+    obitosInfantis0a4: float | int | None = None
+
+class SocioeconomicoHabitacao(BaseModel):
+    pctDomImprovisado: float | int | None = None
+    pctDomSuperlotado: float | int | None = None
+
 
 class Socioeconomico(BaseModel):
     anoReferencia: int | None = None
@@ -51,6 +59,8 @@ class Socioeconomico(BaseModel):
     saneamento: SocioeconomicoSaneamento | None = None
     educacaoPopulacao: SocioeconomicoEducacaoPopulacao | None = None
     familia: SocioeconomicoFamilia | None = None
+    mortalidade: SocioeconomicoMortalidade | None = None
+    habitacao: SocioeconomicoHabitacao | None = None
 
 
 class EducacaoMunicipio(BaseModel):
