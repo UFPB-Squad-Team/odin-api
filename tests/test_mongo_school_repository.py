@@ -133,3 +133,50 @@ async def test_get_bairros_geojson_ignores_docs_without_coordinates():
     result = await repository.get_bairros_geojson("Joao Pessoa")
 
     assert result == {"type": "FeatureCollection", "features": []}
+
+
+@pytest.mark.asyncio
+async def test_get_paraiba_geojson_uses_escola_id_inep_as_feature_id():
+    collection = FakeCollection([])
+    collection.aggregate_documents = [
+        {
+            "_id": "mongo-id-1",
+            "escolaNome": "Escola A",
+            "escolaIdInep": 25033158,
+            "municipioNome": "Agua Branca",
+            "municipioIdIbge": "2500106",
+            "bairro": "Centro",
+            "dependenciaAdm": "Municipal",
+            "tipoLocalizacao": "Urbana",
+            "ideb": 4.2,
+            "geometry": {"type": "Point", "coordinates": [-34.86, -7.12]},
+        }
+    ]
+    repository = MongoSchoolRepository(collection=collection)
+
+    result = await repository.get_paraiba_geojson()
+
+    assert collection.aggregate_pipeline is not None
+    match_stage = collection.aggregate_pipeline[0]["$match"]
+    assert match_stage["estadoSigla"] == "PB"
+    assert "$or" not in match_stage
+
+    feature = result["features"][0]
+    assert feature["id"] == "25033158"
+    assert feature["properties"]["id"] == "25033158"
+    assert feature["properties"]["escola_id_inep"] == 25033158
+    assert feature["properties"]["municipioIdIbge"] == "2500106"
+
+
+@pytest.mark.asyncio
+async def test_get_paraiba_geojson_adds_municipio_id_filter_when_informed():
+    collection = FakeCollection([])
+    collection.aggregate_documents = []
+    repository = MongoSchoolRepository(collection=collection)
+
+    await repository.get_paraiba_geojson(municipio_id="2507507")
+
+    assert collection.aggregate_pipeline is not None
+    match_stage = collection.aggregate_pipeline[0]["$match"]
+    assert "$or" in match_stage
+    assert {"municipioIdIbge": {"$in": ["2507507", 2507507]}} in match_stage["$or"]

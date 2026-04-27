@@ -76,6 +76,13 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
 
         return candidates
 
+    @staticmethod
+    def _build_municipio_id_values(municipio_id: str) -> list[str | int]:
+        values: list[str | int] = [municipio_id]
+        if municipio_id.isdigit():
+            values.append(int(municipio_id))
+        return values
+
     async def list_all(
         self,
         page: int,
@@ -91,22 +98,42 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
     async def find_paginated(self, query: QueryOptions) -> PaginatedResponse[School]:
         return await super().find_paginated(query)
 
-    async def get_paraiba_geojson(self) -> dict:
+    async def get_paraiba_geojson(self, municipio_id: str | None = None) -> dict:
+        match_stage = {
+            "estadoSigla": "PB",
+            "localizacao.type": "Point",
+            "localizacao.coordinates.0": {"$type": "number"},
+            "localizacao.coordinates.1": {"$type": "number"},
+        }
+
+        if municipio_id is not None:
+            municipio_id_values = self._build_municipio_id_values(municipio_id)
+            match_stage["$or"] = [
+                {"municipioIdIbge": {"$in": municipio_id_values}},
+                {"municipio_id_ibge": {"$in": municipio_id_values}},
+                {"co_municipio": {"$in": municipio_id_values}},
+                {"idIbge": {"$in": municipio_id_values}},
+            ]
+
         pipeline = [
-            {
-                "$match": {
-                    "estadoSigla": "PB",
-                    "localizacao.type": "Point",
-                    "localizacao.coordinates.0": {"$type": "number"},
-                    "localizacao.coordinates.1": {"$type": "number"},
-                }
-            },
+            {"$match": match_stage},
             {
                 "$project": {
                     "_id": 1,
                     "escolaNome": 1,
                     "escolaIdInep": 1,
                     "municipioNome": 1,
+                    "municipioIdIbge": {
+                        "$ifNull": [
+                            "$municipioIdIbge",
+                            {
+                                "$ifNull": [
+                                    "$municipio_id_ibge",
+                                    {"$ifNull": ["$co_municipio", "$idIbge"]},
+                                ]
+                            },
+                        ]
+                    },
                     "bairro": "$endereco.bairro",
                     "dependenciaAdm": 1,
                     "tipoLocalizacao": 1,
@@ -118,26 +145,39 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
 
         docs = await self.collection.aggregate(pipeline, allowDiskUse=True).to_list(length=None)
 
-        return {
-            "type": "FeatureCollection",
-            "features": [
+        features = []
+        for doc in docs:
+            escola_id_inep = doc.get("escolaIdInep")
+            if escola_id_inep is None:
+                continue
+
+            feature_id = str(escola_id_inep)
+            municipio_id_ibge = doc.get("municipioIdIbge")
+
+            features.append(
                 {
                     "type": "Feature",
-                    "id": str(doc.get("_id")),
+                    "id": feature_id,
                     "geometry": doc.get("geometry"),
                     "properties": {
+                        "id": feature_id,
                         "escola_nome": doc.get("escolaNome"),
-                        "escola_id_inep": doc.get("escolaIdInep"),
+                        "escola_id_inep": escola_id_inep,
                         "municipio_nome": doc.get("municipioNome"),
+                        "municipioIdIbge": (
+                            str(municipio_id_ibge)
+                            if municipio_id_ibge is not None
+                            else None
+                        ),
                         "bairro": doc.get("bairro"),
                         "dependencia_adm": doc.get("dependenciaAdm"),
                         "tipo_localizacao": doc.get("tipoLocalizacao"),
                         "ideb": doc.get("ideb"),
                     },
                 }
-                for doc in docs
-            ],
-        }
+            )
+
+        return {"type": "FeatureCollection", "features": features}
 
     async def get_bairros_geojson(self, municipio: str) -> dict:
         municipio_candidates = self._build_municipio_candidates(municipio)
