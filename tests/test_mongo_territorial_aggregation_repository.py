@@ -59,6 +59,16 @@ async def test_get_cities_returns_primary_collection_when_available():
             "avg_ideb": 5.2,
             "pct_com_internet": 100,
             "centroide": {"type": "Point", "coordinates": [-34.86, -7.12]},
+            "socioeconomico": {
+                "anoReferencia": 2022,
+                "fonte": "IBGE Censo Demografico 2022",
+                "populacao": {"total": 1000},
+            },
+            "educacao": {
+                "totalEscolas": 101,
+                "totalMatriculas": 51000,
+                "pctComInternet": 98.5,
+            },
         }
     )
     bairro_collection = FakeCollection()
@@ -77,8 +87,11 @@ async def test_get_cities_returns_primary_collection_when_available():
     feature = result["features"][0]
     assert feature["properties"]["source"] == "municipio_indicadores"
     assert feature["geometry"]["coordinates"] == [-34.86, -7.12]
-    assert feature["properties"]["total_alunos"] == 50000
-    assert feature["properties"]["pct_com_internet"] == 100.0
+    assert feature["properties"]["total_escolas"] == 101
+    assert feature["properties"]["total_alunos"] == 51000
+    assert feature["properties"]["pct_com_internet"] == 98.5
+    assert feature["properties"]["socioeconomico"]["anoReferencia"] == 2022
+    assert feature["properties"]["educacao"]["totalMatriculas"] == 51000
     assert setor_collection.last_aggregate_pipeline is None
 
 

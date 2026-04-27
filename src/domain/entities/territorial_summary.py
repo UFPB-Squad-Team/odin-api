@@ -17,6 +17,8 @@ class CitySummary(BaseModel):
     pct_com_internet: float | None = None
     pct_com_lab_informatica: float | None = None
     pct_sem_acessibilidade: float | None = None
+    socioeconomico: dict | None = None
+    educacao: dict | None = None
     full_geometry: dict | None = Field(
         default=None,
         description="Full geometry (Polygon/MultiPolygon/Point) when available",
