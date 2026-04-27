@@ -137,6 +137,8 @@ class MongoNeighborhoodAggregation(BaseModel):
     )
     nivel: Literal["bairro", "setor"] = "bairro"
     cd_setor: str | None = None
+    socioeconomico: Socioeconomico | None = None
+    educacao: EducacaoMunicipio | None = None
     source: str
 
 
@@ -157,6 +159,8 @@ class NeighborhoodAggregationProperties(BaseModel):
     tem_bairro_oficial: bool = Field(serialization_alias="tem_bairro_oficial")
     nivel: Literal["bairro", "setor"] = "bairro"
     cd_setor: str | None = None
+    socioeconomico: Socioeconomico | None = None
+    educacao: EducacaoMunicipio | None = None
     source: str
 
 

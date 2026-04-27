@@ -79,6 +79,16 @@ class FakeGetNeighborhoodAggregationsUseCase:
                 "total_matriculas": 4500,
                 "tem_bairro_oficial": bairro is not None,
                 "nivel": "bairro",
+                "socioeconomico": {
+                    "anoReferencia": 2022,
+                    "fonte": "IBGE",
+                    "populacao": {"total": 14000},
+                },
+                "educacao": {
+                    "totalEscolas": 10,
+                    "totalMatriculas": 4500,
+                    "pctComInternet": 100,
+                },
                 "source": "bairros_indicadores",
             }
         ]
@@ -144,6 +154,8 @@ async def test_get_neighborhood_aggregations_route_returns_200(monkeypatch):
     assert payload[0]["geometria"] is None
     assert payload[0]["tem_bairro_oficial"] is False
     assert payload[0]["nivel"] == "bairro"
+    assert payload[0]["socioeconomico"]["anoReferencia"] == 2022
+    assert payload[0]["educacao"]["totalMatriculas"] == 4500
     assert payload[0]["source"] == "bairros_indicadores"
 
 
@@ -177,6 +189,8 @@ async def test_get_neighborhood_aggregations_route_can_include_geometria(monkeyp
     assert payload["features"][0]["geometry"]["type"] == "Point"
     assert payload["features"][0]["properties"]["tem_bairro_oficial"] is False
     assert payload["features"][0]["properties"]["nivel"] == "bairro"
+    assert payload["features"][0]["properties"]["socioeconomico"]["anoReferencia"] == 2022
+    assert payload["features"][0]["properties"]["educacao"]["totalMatriculas"] == 4500
 
 
 @pytest.mark.asyncio

@@ -179,7 +179,46 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                 ]
             }
 
-        return await self.bairro_collection.find(query).to_list(length=None)
+        projection = {
+            "_id": 1,
+            "municipio": 1,
+            "nm_municipio": 1,
+            "bairro": 1,
+            "nm_bairro": 1,
+            "nome_area": 1,
+            "situacao": 1,
+            "cd_bairro_ibge": 1,
+            "cd_bairro": 1,
+            "geometria": 1,
+            "geometry": 1,
+            "centroide": 1,
+            "centroid": 1,
+            "localizacao": 1,
+            "municipioIdIbge": 1,
+            "municipio_id_ibge": 1,
+            "co_municipio": 1,
+            "idIbge": 1,
+            "sg_uf": 1,
+            "uf": 1,
+            "total_escolas": 1,
+            "qtd_escolas": 1,
+            "total_matriculas": 1,
+            "total_alunos": 1,
+            "qtd_alunos": 1,
+            "pct_com_biblioteca": 1,
+            "pct_com_internet": 1,
+            "pct_com_lab_informatica": 1,
+            "pct_sem_acessibilidade": 1,
+            "tem_bairro_official": 1,
+            "tem_bairro_oficial": 1,
+            "cd_setor": 1,
+            "co_setor": 1,
+            "id_setor": 1,
+            "socioeconomico": 1,
+            "educacao": 1,
+        }
+
+        return await self.bairro_collection.find(query, projection).to_list(length=None)
 
     async def _aggregate_city_from_setor(
         self,
@@ -229,6 +268,8 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                     "pct_com_internet": "$pct_com_internet",
                     "pct_com_lab_informatica": "$pct_com_lab_informatica",
                     "pct_sem_acessibilidade": "$pct_sem_acessibilidade",
+                    "socioeconomico": "$socioeconomico",
+                    "educacao": "$educacao",
                     "lon": {
                         "$ifNull": [
                             "$longitude",
@@ -324,9 +365,24 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
             },
             {
                 "$project": {
-                    "co_municipio": 1,
+                    "co_municipio": {
+                        "$ifNull": [
+                            "$co_municipio",
+                            {
+                                "$ifNull": [
+                                    "$municipioIdIbge",
+                                    {"$ifNull": ["$municipio_id_ibge", "$idIbge"]},
+                                ]
+                            },
+                        ]
+                    },
                     "municipio": {"$ifNull": ["$nm_municipio", "$municipio"]},
-                    "uf": {"$ifNull": ["$sg_uf", "$uf"]},
+                    "uf": {
+                        "$ifNull": [
+                            "$sg_uf",
+                            {"$ifNull": ["$uf", "$estado_sigla"]},
+                        ]
+                    },
                     "tem_bairro_official": {
                         "$ifNull": ["$tem_bairro_official", {"$ifNull": ["$tem_bairro_oficial", True]}]
                     },
@@ -340,19 +396,58 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                     "nome_area": 1,
                     "situacao": 1,
                     "total_escolas": {
-                        "$ifNull": ["$total_escolas", {"$ifNull": ["$qtd_escolas", 0]}]
+                        "$ifNull": [
+                            "$total_escolas",
+                            {
+                                "$ifNull": [
+                                    "$qtd_escolas",
+                                    {"$ifNull": ["$educacao.totalEscolas", "$educacao.total_escolas"]},
+                                ]
+                            },
+                        ]
                     },
                     "total_alunos": {
                         "$ifNull": [
                             "$total_alunos",
-                            {"$ifNull": ["$total_matriculas", {"$ifNull": ["$qtd_alunos", 0]}]},
+                            {
+                                "$ifNull": [
+                                    "$total_matriculas",
+                                    {
+                                        "$ifNull": [
+                                            "$qtd_alunos",
+                                            {
+                                                "$ifNull": [
+                                                    "$educacao.totalMatriculas",
+                                                    "$educacao.total_matriculas",
+                                                ]
+                                            },
+                                        ]
+                                    },
+                                ]
+                            },
                         ]
                     },
                     "avg_ideb": {"$ifNull": ["$avg_ideb", "$ideb"]},
-                    "pct_com_biblioteca": "$pct_com_biblioteca",
-                    "pct_com_internet": "$pct_com_internet",
-                    "pct_com_lab_informatica": "$pct_com_lab_informatica",
-                    "pct_sem_acessibilidade": "$pct_sem_acessibilidade",
+                    "pct_com_biblioteca": {
+                        "$ifNull": ["$pct_com_biblioteca", {"$ifNull": ["$educacao.pctComBiblioteca", "$educacao.pct_com_biblioteca"]}]
+                    },
+                    "pct_com_internet": {
+                        "$ifNull": ["$pct_com_internet", {"$ifNull": ["$educacao.pctComInternet", "$educacao.pct_com_internet"]}]
+                    },
+                    "pct_com_lab_informatica": {
+                        "$ifNull": ["$pct_com_lab_informatica", {"$ifNull": ["$educacao.pctComLabInformatica", "$educacao.pct_com_lab_informatica"]}]
+                    },
+                    "pct_sem_acessibilidade": {
+                        "$ifNull": ["$pct_sem_acessibilidade", {"$ifNull": ["$educacao.pctSemAcessibilidade", "$educacao.pct_sem_acessibilidade"]}]
+                    },
+                    "geometria": {
+                        "$ifNull": [
+                            "$geometria",
+                            {"$ifNull": ["$geometry", {"$ifNull": ["$centroide", {"$ifNull": ["$centroid", "$localizacao"]}]}]},
+                        ]
+                    },
+                    "socioeconomico": "$socioeconomico",
+                    "educacao": "$educacao",
                     "lon": {
                         "$ifNull": [
                             "$longitude",
@@ -413,6 +508,23 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                     }
                 }
             },
+            {
+                "$addFields": {
+                    "has_geometria": {
+                        "$cond": {
+                            "if": {"$ne": ["$geometria", None]},
+                            "then": 1,
+                            "else": 0,
+                        }
+                    }
+                }
+            },
+            {
+                "$sort": {
+                    "bairro_resolvido": 1,
+                    "has_geometria": -1,
+                }
+            },
         ]
 
         if bairro:
@@ -445,6 +557,9 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                         "pct_com_internet": {"$avg": "$pct_com_internet"},
                         "pct_com_lab_informatica": {"$avg": "$pct_com_lab_informatica"},
                         "pct_sem_acessibilidade": {"$avg": "$pct_sem_acessibilidade"},
+                        "geometria": {"$first": "$geometria"},
+                        "socioeconomico": {"$first": "$socioeconomico"},
+                        "educacao": {"$first": "$educacao"},
                         "avg_lon": {"$avg": "$lon"},
                         "avg_lat": {"$avg": "$lat"},
                     }
@@ -465,6 +580,9 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                         "pct_com_internet": 1,
                         "pct_com_lab_informatica": 1,
                         "pct_sem_acessibilidade": 1,
+                        "geometria": 1,
+                        "socioeconomico": 1,
+                        "educacao": 1,
                         "avg_lon": 1,
                         "avg_lat": 1,
                     }
