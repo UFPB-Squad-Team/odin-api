@@ -38,6 +38,11 @@ class FakeGetCityAggregationsUseCase:
                         "total_escolas": 123,
                         "total_alunos": 45678,
                         "avg_ideb": 5.1,
+                        "socioeconomico": {
+                            "anoReferencia": 2022,
+                            "fonte": "IBGE Censo Demografico 2022",
+                            "populacao": {"total": 817511},
+                        },
                         "source": source,
                     },
                 }
@@ -106,6 +111,7 @@ async def test_get_city_aggregations_route_returns_200_and_feature_collection(mo
     assert payload["type"] == "FeatureCollection"
     assert payload["features"][0]["properties"]["source"] == "setor_indicadores"
     assert payload["features"][0]["geometry"]["coordinates"] == [-34.86, -7.12]
+    assert payload["features"][0]["properties"]["socioeconomico"]["anoReferencia"] == 2022
 
 
 @pytest.mark.asyncio
