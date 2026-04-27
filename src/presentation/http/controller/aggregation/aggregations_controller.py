@@ -56,6 +56,8 @@ def _to_neighborhood_feature_collection(
             "pct_sem_acessibilidade": item.get("pct_sem_acessibilidade"),
             "tem_bairro_oficial": bool(item.get("tem_bairro_oficial", True)),
             "nivel": nivel,
+            "socioeconomico": item.get("socioeconomico"),
+            "educacao": item.get("educacao"),
             "source": str(item.get("source", "")),
         }
 

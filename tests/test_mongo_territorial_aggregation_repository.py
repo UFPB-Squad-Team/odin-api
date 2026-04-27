@@ -32,14 +32,16 @@ class FakeCollection:
         self.aggregate_docs = list(aggregate_docs or [])
         self.last_find_one_query = None
         self.last_find_query = None
+        self.last_find_projection = None
         self.last_aggregate_pipeline = None
 
     async def find_one(self, query):
         self.last_find_one_query = query
         return self.find_one_doc
 
-    def find(self, query):
+    def find(self, query, projection=None):
         self.last_find_query = query
+        self.last_find_projection = projection
         return FakeFindCursor(self.find_docs)
 
     def aggregate(self, pipeline):
@@ -192,6 +194,16 @@ async def test_get_by_municipio_returns_primary_bairro_collection():
                 "sg_uf": "PB",
                 "total_escolas": 2,
                 "total_matriculas": 2182,
+                "socioeconomico": {
+                    "anoReferencia": 2022,
+                    "fonte": "IBGE",
+                    "populacao": {"total": 10000},
+                },
+                "educacao": {
+                    "totalEscolas": 2,
+                    "totalMatriculas": 2182,
+                    "pctComInternet": 100,
+                },
             }
         ]
     )
@@ -214,6 +226,8 @@ async def test_get_by_municipio_returns_primary_bairro_collection():
     assert item["geometria"] is None
     assert item["tem_bairro_oficial"] is True
     assert item["nivel"] == "bairro"
+    assert item["socioeconomico"]["anoReferencia"] == 2022
+    assert item["educacao"]["totalMatriculas"] == 2182
     assert item["source"] == "bairros_indicadores"
     assert setor_collection.last_aggregate_pipeline is None
     assert {"$or": [
@@ -244,6 +258,16 @@ async def test_get_by_municipio_uses_setor_fallback_when_bairro_collection_missi
                 "pct_com_internet": 100,
                 "pct_com_lab_informatica": 61.11666666666667,
                 "pct_sem_acessibilidade": 5.55,
+                "socioeconomico": {
+                    "anoReferencia": 2022,
+                    "fonte": "IBGE",
+                    "populacao": {"total": 5000},
+                },
+                "educacao": {
+                    "totalEscolas": 10,
+                    "totalMatriculas": 4500,
+                    "pctComInternet": 100,
+                },
             }
         ]
     )
@@ -266,6 +290,8 @@ async def test_get_by_municipio_uses_setor_fallback_when_bairro_collection_missi
     assert item["pct_sem_acessibilidade"] == 5.55
     assert item["nivel"] == "setor"
     assert item["cd_setor"] == "250750705000101"
+    assert item["socioeconomico"]["anoReferencia"] == 2022
+    assert item["educacao"]["totalMatriculas"] == 4500
     assert item["source"] == "setor_indicadores"
     first_match = setor_collection.last_aggregate_pipeline[0]["$match"]["$or"]
     assert {"co_municipio": {"$in": ["2507507", 2507507]}} in first_match

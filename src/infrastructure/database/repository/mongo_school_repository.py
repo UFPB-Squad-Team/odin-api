@@ -1,5 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 import unicodedata
+import asyncio
+import time
 from bson import ObjectId
 from bson.errors import InvalidId
 
@@ -53,6 +55,12 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             default_sort_field="escolaIdInep",
             use_estimated_total_for_unfiltered=config.use_estimated_total_for_unfiltered_lists,
         )
+        self._paraiba_geojson_cache: dict[str, tuple[float, dict]] = {}
+        self._paraiba_geojson_ttl_seconds = 60.0
+        self._paraiba_geojson_cache_lock = asyncio.Lock()
+        self._paraiba_geojson_cache_max_keys = 512
+        self._geojson_indexes_ready = False
+        self._geojson_index_lock = asyncio.Lock()
 
     @staticmethod
     def _normalize_municipio_input(value: str) -> str:
@@ -77,6 +85,73 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
 
         return candidates
 
+    @staticmethod
+    def _build_municipio_id_values(municipio_id: str) -> list[str | int]:
+        values: list[str | int] = [municipio_id]
+        if municipio_id.isdigit():
+            values.append(int(municipio_id))
+        return values
+
+    @staticmethod
+    def _resolve_municipio_id_ibge(doc: dict) -> str | None:
+        for key in ("municipioIdIbge", "municipio_id_ibge", "co_municipio", "idIbge"):
+            value = doc.get(key)
+            if value is not None:
+                return str(value)
+        return None
+
+    async def _ensure_geojson_indexes(self) -> None:
+        if self._geojson_indexes_ready or not hasattr(self.collection, "create_index"):
+            return
+
+        async with self._geojson_index_lock:
+            if self._geojson_indexes_ready:
+                return
+
+            try:
+                await self.collection.create_index(
+                    [
+                        ("estadoSigla", 1),
+                        ("municipioIdIbge", 1),
+                        ("escolaIdInep", 1),
+                    ],
+                    background=True,
+                    name="idx_geojson_paraiba_municipio",
+                )
+                await self.collection.create_index(
+                    [
+                        ("estadoSigla", 1),
+                        ("municipio_id_ibge", 1),
+                        ("escolaIdInep", 1),
+                    ],
+                    background=True,
+                    name="idx_geojson_paraiba_municipio_legacy",
+                )
+            except Exception:
+                pass
+
+            self._geojson_indexes_ready = True
+
+    def _cleanup_paraiba_geojson_cache(self, now: float) -> None:
+        expired_keys = [
+            key
+            for key, (cached_at, _) in self._paraiba_geojson_cache.items()
+            if (now - cached_at) >= self._paraiba_geojson_ttl_seconds
+        ]
+        for key in expired_keys:
+            self._paraiba_geojson_cache.pop(key, None)
+
+        if len(self._paraiba_geojson_cache) <= self._paraiba_geojson_cache_max_keys:
+            return
+
+        oldest_keys = sorted(
+            self._paraiba_geojson_cache.items(),
+            key=lambda item: item[1][0],
+        )
+        to_remove = len(self._paraiba_geojson_cache) - self._paraiba_geojson_cache_max_keys
+        for key, _ in oldest_keys[:to_remove]:
+            self._paraiba_geojson_cache.pop(key, None)
+
     async def list_all(
         self,
         page: int,
@@ -92,53 +167,88 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
     async def find_paginated(self, query: QueryOptions) -> PaginatedResponse[School]:
         return await super().find_paginated(query)
 
-    async def get_paraiba_geojson(self) -> dict:
-        pipeline = [
-            {
-                "$match": {
-                    "estadoSigla": "PB",
-                    "localizacao.type": "Point",
-                    "localizacao.coordinates.0": {"$type": "number"},
-                    "localizacao.coordinates.1": {"$type": "number"},
-                }
-            },
-            {
-                "$project": {
-                    "_id": 1,
-                    "escolaNome": 1,
-                    "escolaIdInep": 1,
-                    "municipioNome": 1,
-                    "bairro": "$endereco.bairro",
-                    "dependenciaAdm": 1,
-                    "tipoLocalizacao": 1,
-                    "ideb": "$indicadores.ideb",
-                    "geometry": "$localizacao",
-                }
-            },
-        ]
+    async def get_paraiba_geojson(self, municipio_id: str | None = None) -> dict:
+        await self._ensure_geojson_indexes()
 
-        docs = await self.collection.aggregate(pipeline, allowDiskUse=True).to_list(length=None)
+        cache_key = municipio_id or "__all__"
+        now = time.monotonic()
+        self._cleanup_paraiba_geojson_cache(now)
+        cached = self._paraiba_geojson_cache.get(cache_key)
+        if cached and (now - cached[0]) < self._paraiba_geojson_ttl_seconds:
+            return cached[1]
 
-        return {
-            "type": "FeatureCollection",
-            "features": [
+        match_query = {
+            "estadoSigla": "PB",
+            "localizacao.type": "Point",
+            "localizacao.coordinates.0": {"$type": "number"},
+            "localizacao.coordinates.1": {"$type": "number"},
+        }
+
+        if municipio_id is not None:
+            municipio_id_values = self._build_municipio_id_values(municipio_id)
+            match_query["$or"] = [
+                {"municipioIdIbge": {"$in": municipio_id_values}},
+                {"municipio_id_ibge": {"$in": municipio_id_values}},
+                {"co_municipio": {"$in": municipio_id_values}},
+                {"idIbge": {"$in": municipio_id_values}},
+            ]
+
+        projection = {
+            "_id": 1,
+            "escolaNome": 1,
+            "escolaIdInep": 1,
+            "municipioNome": 1,
+            "municipioIdIbge": 1,
+            "municipio_id_ibge": 1,
+            "co_municipio": 1,
+            "idIbge": 1,
+            "endereco.bairro": 1,
+            "dependenciaAdm": 1,
+            "tipoLocalizacao": 1,
+            "indicadores.ideb": 1,
+            "localizacao": 1,
+        }
+
+        docs = await self.collection.find(match_query, projection).to_list(length=None)
+
+        features = []
+        for doc in docs:
+            escola_id_inep = doc.get("escolaIdInep")
+            if escola_id_inep is None:
+                continue
+
+            feature_id = str(escola_id_inep)
+            municipio_id_ibge = self._resolve_municipio_id_ibge(doc)
+
+            features.append(
                 {
                     "type": "Feature",
-                    "id": str(doc.get("_id")),
-                    "geometry": doc.get("geometry"),
+                    "id": feature_id,
+                    "geometry": doc.get("localizacao"),
                     "properties": {
+                        "id": feature_id,
                         "escola_nome": doc.get("escolaNome"),
-                        "escola_id_inep": doc.get("escolaIdInep"),
+                        "escola_id_inep": escola_id_inep,
                         "municipio_nome": doc.get("municipioNome"),
-                        "bairro": doc.get("bairro"),
+                        "municipioIdIbge": (
+                            str(municipio_id_ibge)
+                            if municipio_id_ibge is not None
+                            else None
+                        ),
+                        "bairro": (doc.get("endereco") or {}).get("bairro"),
                         "dependencia_adm": doc.get("dependenciaAdm"),
                         "tipo_localizacao": doc.get("tipoLocalizacao"),
-                        "ideb": doc.get("ideb"),
+                        "ideb": (doc.get("indicadores") or {}).get("ideb"),
                     },
                 }
-                for doc in docs
-            ],
-        }
+            )
+
+        result = {"type": "FeatureCollection", "features": features}
+        async with self._paraiba_geojson_cache_lock:
+            write_now = time.monotonic()
+            self._cleanup_paraiba_geojson_cache(write_now)
+            self._paraiba_geojson_cache[cache_key] = (write_now, result)
+        return result
 
     async def get_bairros_geojson(self, municipio: str) -> dict:
         municipio_candidates = self._build_municipio_candidates(municipio)

@@ -133,7 +133,7 @@ class ISchoolRepository(IBaseReadRepository[School], ABC):
         ...
 
     @abstractmethod
-    async def get_paraiba_geojson(self) -> Dict[str, Any]:
+    async def get_paraiba_geojson(self, municipio_id: str | None = None) -> Dict[str, Any]:
         """Returns all schools in Paraiba as a GeoJSON FeatureCollection."""
         ...
 
