@@ -38,15 +38,29 @@ class FakeGetSchoolByIdUseCase:
 
 
 class FakeGetParaibaGeoJsonUseCase:
-    async def execute(self):
+    def __init__(self):
+        self.last_municipio_id = None
+
+    async def execute(self, municipio_id: str | None = None):
+        self.last_municipio_id = municipio_id
         return {
             "type": "FeatureCollection",
             "features": [
                 {
                     "type": "Feature",
-                    "id": "school-1",
+                    "id": "25033158",
                     "geometry": {"type": "Point", "coordinates": [-34.86, -7.12]},
-                    "properties": {"bairro": "Centro"},
+                    "properties": {
+                        "id": "25033158",
+                        "escola_nome": "EMEIF MAE IAIA",
+                        "escola_id_inep": 25033158,
+                        "municipio_nome": "Agua Branca",
+                        "municipioIdIbge": "2500106",
+                        "bairro": "GUALTERINA ALENCAR VIDAL",
+                        "dependencia_adm": "Municipal",
+                        "tipo_localizacao": "Urbana",
+                        "ideb": 4.2,
+                    },
                 }
             ],
         }
@@ -251,7 +265,8 @@ async def test_get_paraiba_geojson_route_returns_feature_collection(monkeypatch)
 
     monkeypatch.setattr(mongodb, "connect", fake_connect)
     monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
-    app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: FakeGetParaibaGeoJsonUseCase()
+    fake_use_case = FakeGetParaibaGeoJsonUseCase()
+    app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: fake_use_case
 
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
@@ -262,7 +277,35 @@ async def test_get_paraiba_geojson_route_returns_feature_collection(monkeypatch)
     assert response.status_code == 200
     payload = response.json()
     assert payload["type"] == "FeatureCollection"
-    assert payload["features"][0]["properties"]["bairro"] == "Centro"
+    assert payload["features"][0]["id"] == "25033158"
+    assert payload["features"][0]["properties"]["id"] == "25033158"
+    assert payload["features"][0]["properties"]["municipioIdIbge"] == "2500106"
+    assert fake_use_case.last_municipio_id is None
+
+
+@pytest.mark.asyncio
+async def test_get_paraiba_geojson_route_accepts_municipio_id_filter(monkeypatch):
+    async def fake_connect():
+        return True
+
+    async def fake_disconnect():
+        return None
+
+    from src.infrastructure.database.config.connect_db import mongodb
+
+    monkeypatch.setattr(mongodb, "connect", fake_connect)
+    monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    fake_use_case = FakeGetParaibaGeoJsonUseCase()
+    app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: fake_use_case
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/v1/escolas/geojson/paraiba?municipio_id=2507507")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert fake_use_case.last_municipio_id == "2507507"
 
 
 @pytest.mark.asyncio

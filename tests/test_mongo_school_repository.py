@@ -133,3 +133,73 @@ async def test_get_bairros_geojson_ignores_docs_without_coordinates():
     result = await repository.get_bairros_geojson("Joao Pessoa")
 
     assert result == {"type": "FeatureCollection", "features": []}
+
+
+@pytest.mark.asyncio
+async def test_get_paraiba_geojson_uses_escola_id_inep_as_feature_id():
+    collection = FakeCollection([
+        {
+            "_id": "mongo-id-1",
+            "escolaNome": "Escola A",
+            "escolaIdInep": 25033158,
+            "municipioNome": "Agua Branca",
+            "municipioIdIbge": "2500106",
+            "bairro": "Centro",
+            "dependenciaAdm": "Municipal",
+            "tipoLocalizacao": "Urbana",
+            "indicadores": {"ideb": 4.2},
+            "localizacao": {"type": "Point", "coordinates": [-34.86, -7.12]},
+        }
+    ])
+    repository = MongoSchoolRepository(collection=collection)
+
+    result = await repository.get_paraiba_geojson()
+
+    assert collection.find_args is not None
+    query, projection = collection.find_args
+    assert query["estadoSigla"] == "PB"
+    assert "$or" not in query
+    assert projection is not None
+    assert projection["localizacao"] == 1
+
+    feature = result["features"][0]
+    assert feature["id"] == "25033158"
+    assert feature["properties"]["id"] == "25033158"
+    assert feature["properties"]["escola_id_inep"] == 25033158
+    assert feature["properties"]["municipioIdIbge"] == "2500106"
+
+
+@pytest.mark.asyncio
+async def test_get_paraiba_geojson_adds_municipio_id_filter_when_informed():
+    collection = FakeCollection([])
+    repository = MongoSchoolRepository(collection=collection)
+
+    await repository.get_paraiba_geojson(municipio_id="2507507")
+
+    assert collection.find_args is not None
+    query, _ = collection.find_args
+    assert "$or" in query
+    assert {"municipioIdIbge": {"$in": ["2507507", 2507507]}} in query["$or"]
+
+
+@pytest.mark.asyncio
+async def test_get_paraiba_geojson_accepts_legacy_municipio_field_resolution():
+    collection = FakeCollection([
+        {
+            "_id": "mongo-id-legacy",
+            "escolaNome": "Escola Legacy",
+            "escolaIdInep": 12345678,
+            "municipioNome": "Joao Pessoa",
+            "co_municipio": 2507507,
+            "dependenciaAdm": "Municipal",
+            "tipoLocalizacao": "Urbana",
+            "indicadores": {"ideb": 5.0},
+            "localizacao": {"type": "Point", "coordinates": [-34.86, -7.12]},
+        }
+    ])
+    repository = MongoSchoolRepository(collection=collection)
+
+    result = await repository.get_paraiba_geojson()
+
+    feature = result["features"][0]
+    assert feature["properties"]["municipioIdIbge"] == "2507507"
