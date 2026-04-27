@@ -70,13 +70,34 @@ class TerritorialAggregationMapper:
         return None
 
     @classmethod
+    def _extract_full_geometry(cls, doc: dict[str, Any]) -> dict[str, Any] | None:
+        geo = cls._pick(doc, "geometria", "geometry")
+        if isinstance(geo, dict) and "type" in geo and "coordinates" in geo:
+            return geo
+
+        centroid = cls._pick(doc, "centroide", "centroid", "localizacao")
+        if isinstance(centroid, dict) and "coordinates" in centroid:
+            return {
+                "type": centroid.get("type", "Point"),
+                "coordinates": centroid["coordinates"],
+            }
+
+        coords = cls._extract_coordinates(doc)
+        if coords:
+            return {"type": "Point", "coordinates": [coords[0], coords[1]]}
+
+        return None
+
+    @classmethod
     def city_from_doc(
         cls,
         doc: dict[str, Any],
         *,
         source: str,
+        include_geometria: bool = False,
     ) -> CitySummary:
         doc_id = str(doc.get("_id", "")) if doc.get("_id") else None
+
         return CitySummary(
             mongoId=doc_id,
             co_municipio=str(
@@ -116,6 +137,7 @@ class TerritorialAggregationMapper:
             pct_sem_acessibilidade=cls._as_float(
                 cls._pick(doc, "pct_sem_acessibilidade")
             ),
+            full_geometry=cls._extract_full_geometry(doc) if include_geometria else None,
             coordinates=cls._extract_coordinates(doc),
             source=source,
         )
@@ -182,18 +204,20 @@ class TerritorialAggregationMapper:
 
     @staticmethod
     def city_to_feature(city: CitySummary) -> dict[str, Any]:
-        if city.coordinates is None:
-            coordinates = [0.0, 0.0]
+        if city.full_geometry:
+            geometry = city.full_geometry
+        elif city.coordinates is not None:
+            geometry = {
+                "type": "Point",
+                "coordinates": [float(city.coordinates[0]), float(city.coordinates[1])],
+            }
         else:
-            coordinates = [float(city.coordinates[0]), float(city.coordinates[1])]
+            geometry = {"type": "Point", "coordinates": [0.0, 0.0]}
 
         feature = {
             "type": "Feature",
             "id": city.co_municipio,
-            "geometry": {
-                "type": "Point",
-                "coordinates": coordinates,
-            },
+            "geometry": geometry,
             "properties": {
                 "municipioIdIbge": city.co_municipio,
                 "co_municipio": city.co_municipio,

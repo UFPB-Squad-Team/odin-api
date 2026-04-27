@@ -27,6 +27,7 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
         self,
         co_municipio: str | None = None,
         sg_uf: str | None = None,
+        include_geometria: bool = False,
     ) -> dict[str, Any]:
         normalized_uf = sg_uf.upper() if sg_uf else None
 
@@ -59,6 +60,7 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                 city = TerritorialAggregationMapper.city_from_doc(
                     primary_doc,
                     source="municipio_indicadores",
+                    include_geometria=include_geometria,
                 )
                 return {
                     "type": "FeatureCollection",
@@ -73,6 +75,7 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                 TerritorialAggregationMapper.city_from_doc(
                     doc,
                     source="setor_indicadores",
+                    include_geometria=include_geometria,
                 )
                 for doc in fallback_docs
             ]
@@ -99,6 +102,7 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
             TerritorialAggregationMapper.city_from_doc(
                 doc,
                 source="municipio_indicadores",
+                include_geometria=include_geometria,
             )
             for doc in docs
         ]
@@ -123,7 +127,7 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
             return [
                 MongoNeighborhoodMapper.from_doc(
                     doc,
-                    source="bairro_indicadores",
+                    source="bairros_indicadores",
                     include_geometria=include_geometria,
                 )
                 for doc in primary_docs
@@ -327,6 +331,12 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                         "$ifNull": ["$tem_bairro_official", {"$ifNull": ["$tem_bairro_oficial", True]}]
                     },
                     "bairro_oficial": {"$ifNull": ["$bairro", "$nm_bairro"]},
+                    "cd_setor": {
+                        "$ifNull": [
+                            "$cd_setor",
+                            {"$ifNull": ["$co_setor", "$id_setor"]},
+                        ]
+                    },
                     "nome_area": 1,
                     "situacao": 1,
                     "total_escolas": {
@@ -424,6 +434,7 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                         "_id": "$bairro_resolvido",
                         "co_municipio": {"$first": "$co_municipio"},
                         "bairro": {"$first": "$bairro_resolvido"},
+                        "cd_setor": {"$first": "$cd_setor"},
                         "municipio": {"$first": "$municipio"},
                         "uf": {"$first": "$uf"},
                         "tem_bairro_official": {"$first": "$tem_bairro_official"},
@@ -443,6 +454,7 @@ class MongoTerritorialAggregationRepository(ITerritorialAggregationRepository):
                         "_id": 0,
                         "co_municipio": 1,
                         "bairro": 1,
+                        "cd_setor": 1,
                         "municipio": 1,
                         "uf": 1,
                         "tem_bairro_official": 1,

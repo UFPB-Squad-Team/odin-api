@@ -17,6 +17,10 @@ class CitySummary(BaseModel):
     pct_com_internet: float | None = None
     pct_com_lab_informatica: float | None = None
     pct_sem_acessibilidade: float | None = None
+    full_geometry: dict | None = Field(
+        default=None,
+        description="Full geometry (Polygon/MultiPolygon/Point) when available",
+    )
     coordinates: tuple[float, float] | None = Field(
         default=None,
         description="Centroid in [longitude, latitude]",

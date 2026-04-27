@@ -199,7 +199,9 @@ async def test_get_by_municipio_returns_primary_bairro_collection():
     assert item["cd_bairro_ibge"] == "2507507005"
     assert item["total_matriculas"] == 2182
     assert item["geometria"] is None
-    assert item["source"] == "bairro_indicadores"
+    assert item["tem_bairro_oficial"] is True
+    assert item["nivel"] == "bairro"
+    assert item["source"] == "bairros_indicadores"
     assert setor_collection.last_aggregate_pipeline is None
     assert {"$or": [
         {"municipioIdIbge": "2507507"},
@@ -219,6 +221,7 @@ async def test_get_by_municipio_uses_setor_fallback_when_bairro_collection_missi
                 "co_municipio": "2507507",
                 "municipio": "Joao Pessoa",
                 "bairro": "Area Urbana Integrada",
+                "cd_setor": "250750705000101",
                 "tem_bairro_official": False,
                 "total_escolas": 10,
                 "total_alunos": 4500,
@@ -248,6 +251,8 @@ async def test_get_by_municipio_uses_setor_fallback_when_bairro_collection_missi
     assert item["pct_com_biblioteca"] == 72.22
     assert item["pct_com_lab_informatica"] == 61.12
     assert item["pct_sem_acessibilidade"] == 5.55
+    assert item["nivel"] == "setor"
+    assert item["cd_setor"] == "250750705000101"
     assert item["source"] == "setor_indicadores"
     first_match = setor_collection.last_aggregate_pipeline[0]["$match"]["$or"]
     assert {"co_municipio": {"$in": ["2507507", 2507507]}} in first_match
