@@ -10,6 +10,7 @@ from src.domain.repository.school_repository import ISchoolRepository
 from src.domain.value_objects.pagination import PaginatedResponse
 from src.domain.value_objects.query import QueryOptions, QuerySort
 from src.infrastructure.database.config.app_config import config
+
 from ..mapper.school_mapper import MongoSchoolMapper
 from .base_mongo_repository import BaseMongoRepository
 

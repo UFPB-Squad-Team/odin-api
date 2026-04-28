@@ -2,6 +2,7 @@ import pytest
 import httpx
 
 from src.domain.value_objects.pagination import PaginatedResponse
+from src.domain.value_objects.query import QueryFilter
 from src.main import app
 from src.presentation.http.controller.school.callable.school_callable import (
     get_bairro_by_school_id_use_case,
@@ -18,13 +19,17 @@ from tests.factories import build_school
 
 
 class FakeListAllSchoolsUseCase:
+    def __init__(self):
+        self.received_dto = None
+
     async def execute(self, dto):
+        self.received_dto = dto
         return PaginatedResponse(
             items=[build_school()],
             total_items=1,
             page=dto.query.page,
             page_size=dto.query.page_size,
-            next_cursor=None,
+            next_cursor=dto.query.cursor,
         )
 
 
@@ -99,16 +104,13 @@ class FakeGetBairroBySchoolIdUseCase:
 
 @pytest.mark.asyncio
 async def test_school_list_route_returns_paginated_payload(monkeypatch):
-    async def fake_connect():
-        return True
-
-    async def fake_disconnect():
-        return None
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
 
     from src.infrastructure.database.config.connect_db import mongodb
-
     monkeypatch.setattr(mongodb, "connect", fake_connect)
     monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    
     app.dependency_overrides[get_list_all_schools_use_case] = lambda: FakeListAllSchoolsUseCase()
     app.dependency_overrides[get_school_by_id_use_case] = lambda: FakeGetSchoolByIdUseCase()
     app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: FakeGetParaibaGeoJsonUseCase()
@@ -116,10 +118,7 @@ async def test_school_list_route_returns_paginated_payload(monkeypatch):
     app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
 
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/api/v1/all?page=1&page_size=1")
 
     app.dependency_overrides.clear()
@@ -135,16 +134,13 @@ async def test_school_list_route_returns_paginated_payload(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_school_list_route_rejects_deep_offset(monkeypatch):
-    async def fake_connect():
-        return True
-
-    async def fake_disconnect():
-        return None
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
 
     from src.infrastructure.database.config.connect_db import mongodb
-
     monkeypatch.setattr(mongodb, "connect", fake_connect)
     monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    
     app.dependency_overrides[get_list_all_schools_use_case] = lambda: FakeListAllSchoolsUseCase()
     app.dependency_overrides[get_school_by_id_use_case] = lambda: FakeGetSchoolByIdUseCase()
     app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: FakeGetParaibaGeoJsonUseCase()
@@ -152,29 +148,22 @@ async def test_school_list_route_rejects_deep_offset(monkeypatch):
     app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
 
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/api/v1/all?page=999999&page_size=100")
 
     app.dependency_overrides.clear()
-
     assert response.status_code == 422
 
 
 @pytest.mark.asyncio
 async def test_school_list_route_rejects_unsupported_filter(monkeypatch):
-    async def fake_connect():
-        return True
-
-    async def fake_disconnect():
-        return None
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
 
     from src.infrastructure.database.config.connect_db import mongodb
-
     monkeypatch.setattr(mongodb, "connect", fake_connect)
     monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    
     app.dependency_overrides[get_list_all_schools_use_case] = lambda: FakeListAllSchoolsUseCase()
     app.dependency_overrides[get_school_by_id_use_case] = lambda: FakeGetSchoolByIdUseCase()
     app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: FakeGetParaibaGeoJsonUseCase()
@@ -182,43 +171,32 @@ async def test_school_list_route_rejects_unsupported_filter(monkeypatch):
     app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
 
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/api/v1/schools?filter[hack]=1")
 
     app.dependency_overrides.clear()
-
     assert response.status_code == 422
 
 
 @pytest.mark.asyncio
 async def test_school_detail_route_returns_school_when_found(monkeypatch):
-    async def fake_connect():
-        return True
-
-    async def fake_disconnect():
-        return None
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
 
     from src.infrastructure.database.config.connect_db import mongodb
-
     monkeypatch.setattr(mongodb, "connect", fake_connect)
     monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    
     app.dependency_overrides[get_school_by_id_use_case] = lambda: FakeGetSchoolByIdUseCase()
     app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: FakeGetParaibaGeoJsonUseCase()
     app.dependency_overrides[get_bairros_geojson_use_case] = lambda: FakeGetBairrosGeoJsonUseCase()
     app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
 
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/api/v1/68c8d9747e1b2e5af20f3cd9")
 
     app.dependency_overrides.clear()
-
     assert response.status_code == 200
     payload = response.json()
     assert payload["id"] == "68c8d9747e1b2e5af20f3cd9"
@@ -226,43 +204,32 @@ async def test_school_detail_route_returns_school_when_found(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_school_detail_route_returns_404_when_missing(monkeypatch):
-    async def fake_connect():
-        return True
-
-    async def fake_disconnect():
-        return None
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
 
     from src.infrastructure.database.config.connect_db import mongodb
-
     monkeypatch.setattr(mongodb, "connect", fake_connect)
     monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    
     app.dependency_overrides[get_school_by_id_use_case] = lambda: FakeGetSchoolByIdUseCase()
     app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: FakeGetParaibaGeoJsonUseCase()
     app.dependency_overrides[get_bairros_geojson_use_case] = lambda: FakeGetBairrosGeoJsonUseCase()
     app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
 
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/api/v1/missing-id")
 
     app.dependency_overrides.clear()
-
     assert response.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_get_paraiba_geojson_route_returns_feature_collection(monkeypatch):
-    async def fake_connect():
-        return True
-
-    async def fake_disconnect():
-        return None
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
 
     from src.infrastructure.database.config.connect_db import mongodb
-
     monkeypatch.setattr(mongodb, "connect", fake_connect)
     monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
     fake_use_case = FakeGetParaibaGeoJsonUseCase()
@@ -273,7 +240,6 @@ async def test_get_paraiba_geojson_route_returns_feature_collection(monkeypatch)
         response = await client.get("/api/v1/escolas/geojson/paraiba")
 
     app.dependency_overrides.clear()
-
     assert response.status_code == 200
     payload = response.json()
     assert payload["type"] == "FeatureCollection"
@@ -310,14 +276,10 @@ async def test_get_paraiba_geojson_route_accepts_municipio_id_filter(monkeypatch
 
 @pytest.mark.asyncio
 async def test_get_bairros_geojson_route_returns_aggregated_geojson(monkeypatch):
-    async def fake_connect():
-        return True
-
-    async def fake_disconnect():
-        return None
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
 
     from src.infrastructure.database.config.connect_db import mongodb
-
     monkeypatch.setattr(mongodb, "connect", fake_connect)
     monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
     app.dependency_overrides[get_bairros_geojson_use_case] = lambda: FakeGetBairrosGeoJsonUseCase()
@@ -327,7 +289,6 @@ async def test_get_bairros_geojson_route_returns_aggregated_geojson(monkeypatch)
         response = await client.get("/api/v1/bairros/geojson/Joao%20Pessoa")
 
     app.dependency_overrides.clear()
-
     assert response.status_code == 200
     payload = response.json()
     assert payload["type"] == "FeatureCollection"
@@ -336,14 +297,10 @@ async def test_get_bairros_geojson_route_returns_aggregated_geojson(monkeypatch)
 
 @pytest.mark.asyncio
 async def test_get_bairro_by_school_id_route_returns_bairro(monkeypatch):
-    async def fake_connect():
-        return True
-
-    async def fake_disconnect():
-        return None
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
 
     from src.infrastructure.database.config.connect_db import mongodb
-
     monkeypatch.setattr(mongodb, "connect", fake_connect)
     monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
     app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
@@ -353,7 +310,6 @@ async def test_get_bairro_by_school_id_route_returns_bairro(monkeypatch):
         response = await client.get("/api/v1/bairro/68c8d9747e1b2e5af20f3cd9")
 
     app.dependency_overrides.clear()
-
     assert response.status_code == 200
     payload = response.json()
     assert payload["bairro"] == "Centro"
@@ -361,14 +317,10 @@ async def test_get_bairro_by_school_id_route_returns_bairro(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_get_bairro_by_school_id_route_returns_404(monkeypatch):
-    async def fake_connect():
-        return True
-
-    async def fake_disconnect():
-        return None
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
 
     from src.infrastructure.database.config.connect_db import mongodb
-
     monkeypatch.setattr(mongodb, "connect", fake_connect)
     monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
     app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
@@ -378,5 +330,117 @@ async def test_get_bairro_by_school_id_route_returns_404(monkeypatch):
         response = await client.get("/api/v1/bairro/missing-id")
 
     app.dependency_overrides.clear()
-
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_school_list_route_accepts_name_only_search(monkeypatch):
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
+
+    from src.infrastructure.database.config.connect_db import mongodb
+    monkeypatch.setattr(mongodb, "connect", fake_connect)
+    monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    
+    fake_use_case = FakeListAllSchoolsUseCase()
+    app.dependency_overrides[get_list_all_schools_use_case] = lambda: fake_use_case
+    app.dependency_overrides[get_school_by_id_use_case] = lambda: FakeGetSchoolByIdUseCase()
+    app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: FakeGetParaibaGeoJsonUseCase()
+    app.dependency_overrides[get_bairros_geojson_use_case] = lambda: FakeGetBairrosGeoJsonUseCase()
+    app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/v1/all?search=escola")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert fake_use_case.received_dto.search_term == "escola"
+    assert fake_use_case.received_dto.municipio is None
+
+
+@pytest.mark.asyncio
+async def test_school_list_route_accepts_municipio_only_search(monkeypatch):
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
+
+    from src.infrastructure.database.config.connect_db import mongodb
+    monkeypatch.setattr(mongodb, "connect", fake_connect)
+    monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    
+    fake_use_case = FakeListAllSchoolsUseCase()
+    app.dependency_overrides[get_list_all_schools_use_case] = lambda: fake_use_case
+    app.dependency_overrides[get_school_by_id_use_case] = lambda: FakeGetSchoolByIdUseCase()
+    app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: FakeGetParaibaGeoJsonUseCase()
+    app.dependency_overrides[get_bairros_geojson_use_case] = lambda: FakeGetBairrosGeoJsonUseCase()
+    app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/v1/all?municipio=Joao%20Pessoa")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert fake_use_case.received_dto.search_term is None
+    assert fake_use_case.received_dto.municipio == "Joao Pessoa"
+
+
+@pytest.mark.asyncio
+async def test_school_list_route_accepts_combined_search_and_municipio(monkeypatch):
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
+
+    from src.infrastructure.database.config.connect_db import mongodb
+    monkeypatch.setattr(mongodb, "connect", fake_connect)
+    monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    
+    fake_use_case = FakeListAllSchoolsUseCase()
+    app.dependency_overrides[get_list_all_schools_use_case] = lambda: fake_use_case
+    app.dependency_overrides[get_school_by_id_use_case] = lambda: FakeGetSchoolByIdUseCase()
+    app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: FakeGetParaibaGeoJsonUseCase()
+    app.dependency_overrides[get_bairros_geojson_use_case] = lambda: FakeGetBairrosGeoJsonUseCase()
+    app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/v1/all?search=estadual&municipio=Joao%20Pessoa")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert fake_use_case.received_dto.search_term == "estadual"
+    assert fake_use_case.received_dto.municipio == "Joao Pessoa"
+
+
+@pytest.mark.asyncio
+async def test_school_list_route_preserves_filters_and_cursor_with_search_params(monkeypatch):
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
+
+    from src.infrastructure.database.config.connect_db import mongodb
+    monkeypatch.setattr(mongodb, "connect", fake_connect)
+    monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    
+    fake_use_case = FakeListAllSchoolsUseCase()
+    app.dependency_overrides[get_list_all_schools_use_case] = lambda: fake_use_case
+    app.dependency_overrides[get_school_by_id_use_case] = lambda: FakeGetSchoolByIdUseCase()
+    app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: FakeGetParaibaGeoJsonUseCase()
+    app.dependency_overrides[get_bairros_geojson_use_case] = lambda: FakeGetBairrosGeoJsonUseCase()
+    app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            "/api/v1/all?search=centro&cursor=cursor-123&filter[bairro]=Centro&page=1&page_size=10"
+        )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["page"] == 1
+    assert payload["page_size"] == 10
+    assert payload["next_cursor"] == "cursor-123"
+    assert "total_items" in payload
+    assert fake_use_case.received_dto.query.cursor == "cursor-123"
+    assert fake_use_case.received_dto.query.filters == [
+        QueryFilter(field="bairro", operator="eq", value="Centro")
+    ]
