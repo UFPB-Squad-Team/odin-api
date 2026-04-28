@@ -1,52 +1,37 @@
 import pytest
+from tests.factories import FakeCollection 
 from src.infrastructure.database.repository.mongo_stats_repository import MongoStatsRepository
-from src.infrastructure.database.config.connect_db import mongodb # Importa a conexão
-from src.domain.entities.stats import SummaryStats
-from src.infrastructure.database.mapper.school_mapper import MongoSchoolMapper
-import pytest_asyncio
-
-# Isso garante que o loop de eventos não feche entre um teste e outro
-@pytest.fixture(scope="module")
-def event_loop():
-    import asyncio
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 @pytest.mark.asyncio
-async def test_get_summary_stats_should_return_summary_stats_entity():
-    # 1. Garante a conexão manual no teste
-    if not mongodb.is_connected:
-        await mongodb.connect()
-
-    # 2. Pega a coleção real
-    schools_collection = mongodb.get_collection("schools")
-
-    # 3. Instancia o repo com o objeto de coleção real
-    repo = MongoStatsRepository(
-        collection=schools_collection,
-        mapper_to_domain=MongoSchoolMapper.to_domain,
-        field_map={},
-        default_sort_field="municipioNome"
-    )
-
-    result = await repo.get_summary_stats()
-    assert isinstance(result, SummaryStats)
-    assert result.total_escolas >= 0
-
-@pytest.mark.asyncio
-async def test_get_summary_stats_grouping_keys():
-    if not mongodb.is_connected:
-        await mongodb.connect()
-        
-    schools_collection = mongodb.get_collection("schools")
-
-    repo = MongoStatsRepository(
-        collection=schools_collection,
-        mapper_to_domain=MongoSchoolMapper.to_domain,
-        field_map={},
-        default_sort_field="municipioNome"
-    )
+async def test_get_summary_stats_should_call_aggregate_with_correct_pipeline():
+    # 1. ARRANGE (Preparação)
+    # Simulamos o retorno exato que o MongoDB daria após o $facet
+    fake_data = [{
+        "totais": [{"total_escolas": 5, "qtd_internet": 3, "qtd_biblioteca": 2, "qtd_informatica": 1}],
+        "dependencia": [{"_id": "Estadual", "count": 5}],
+        "zona": [{"_id": "Urbana", "count": 5}],
+        "municipios": [{"_id": "2507507"}]
+    }]
     
-    result = await repo.get_summary_stats()
-    assert isinstance(result.por_dependencia, dict)
+    # Usamos a fábrica do projeto como o Samuel sugeriu
+    fake_collection = FakeCollection(documents=fake_data)
+    
+    # O repositório agora recebe apenas a collection (sem herança da Base)
+    repository = MongoStatsRepository(collection=fake_collection)
+
+    # 2. ACT (Ação)
+    result = await repository.get_summary_stats()
+
+    # 3. ASSERT (Verificação)
+    # Prova real: O pipeline foi montado?
+    assert fake_collection.aggregate_pipeline is not None
+    
+    # Prova real: O primeiro estágio é o $match por PB (Eficiência pedida pelo Brenno)
+    assert fake_collection.aggregate_pipeline[0]["$match"]["estadoSigla"] == "PB"
+    
+    # Prova real: O segundo estágio é o $facet (Consolidação de dados)
+    assert "$facet" in fake_collection.aggregate_pipeline[1]
+    
+    # Verifica se os dados retornados batem com o "fake"
+    assert result["totais"][0]["total_escolas"] == 5
+    assert len(result["municipios"]) == 1   

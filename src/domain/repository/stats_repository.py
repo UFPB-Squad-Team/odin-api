@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
-from src.domain.entities.stats import SummaryStats
+from typing import Dict, Any
 
 class IStatsRepository(ABC):
     @abstractmethod
-    async def get_summary_stats(self) -> SummaryStats:
+    async def get_summary_stats(self) -> Dict[str, Any]:
         """
-        Interface obrigatória para o padrão de módulo repetível.
+        Abstrai a consulta no banco de dados para agregar e contabilizar 
+        os indicadores brutos de infraestrutura, dependência e zona.
+        Retorna os dados agregados sem formatação de negócio.
         """
         pass
