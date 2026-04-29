@@ -192,9 +192,16 @@ class TerritorialAggregationMapper:
                 )
             ),
             municipio=str(
-                cls._pick(doc, "nm_municipio", "municipio", "municipio_nome", default="")
+                cls._pick(
+                    doc,
+                    "nm_municipio",
+                    "municipio",
+                    "municipio_nome",
+                    "municipioNome",
+                    default="",
+                )
             ),
-            uf=cls._pick(doc, "sg_uf", "estado_sigla", "uf"),
+            uf=cls._pick(doc, "sg_uf", "estado_sigla", "estadoSigla", "uf"),
             total_escolas=total_escolas or 0,
             total_alunos=total_alunos or 0,
             avg_ideb=cls._as_float(cls._pick(doc, "avg_ideb", "ideb_medio", "ideb")),
