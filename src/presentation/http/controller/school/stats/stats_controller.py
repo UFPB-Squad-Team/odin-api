@@ -6,7 +6,7 @@ router = APIRouter(prefix="/school/stats", tags=["Estatísticas"])
 
 @router.get("/summary", response_model=SummaryStats)
 async def get_summary(
-    # O FastAPI resolve a dependência e entrega o Use Case real e operacional
+   
     use_case = Depends(get_summary_stats_use_case)
 ):
     return await use_case.execute()

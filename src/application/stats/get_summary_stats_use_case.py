@@ -10,7 +10,7 @@ class GetSummaryStatsUseCase:
         Coordena a obtenção das estatísticas agregadas e aplica a regra de negócio
         (cálculo de percentuais e formatação final dos indicadores).
         """
-        # 1. Busca os dados "crus" no repositório
+      
         data = await self.repository.get_summary_stats()
         
         if not data:
@@ -19,7 +19,7 @@ class GetSummaryStatsUseCase:
                 indicadores_infra={}, por_dependencia={}, por_zona={}
             )
 
-        # 2. Aplica as regras de negócio
+       
         totais = data.get("totais", [{}])[0] if data.get("totais") else {}
         total_escolas = totais.get("total_escolas", 0)
         
@@ -42,7 +42,7 @@ class GetSummaryStatsUseCase:
         
         total_municipios = len(data.get("municipios", []))
         
-        # 3. Retorna a Entidade perfeitamente formatada para o Controller
+       
         return SummaryStats(
             total_escolas=total_escolas,
             total_municipios=total_municipios,

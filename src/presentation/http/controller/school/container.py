@@ -10,8 +10,6 @@ from src.application.school.get_school_by_id.get_school_by_id import GetSchoolBy
 from src.application.school.geojson.get_paraiba_geojson import GetParaibaGeoJson
 from src.application.school.geojson.get_bairros_geojson import GetBairrosGeoJson
 from src.application.school.geojson.get_bairro_by_school_id import GetBairroBySchoolId
-
-# Importe os seus ficheiros novos aqui
 from src.infrastructure.database.repository.mongo_stats_repository import MongoStatsRepository
 from src.application.stats.get_summary_stats_use_case import GetSummaryStatsUseCase
 
