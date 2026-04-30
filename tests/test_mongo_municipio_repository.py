@@ -39,6 +39,8 @@ class Collection:
     def __init__(self, documents):
         self.documents = list(documents)
         self.last_find_query = None
+        self.last_find_one_query = None
+        self.last_find_one_projection = None
         self.last_aggregate_pipeline = None
 
     def find(self, query=None, projection=None):
@@ -46,7 +48,9 @@ class Collection:
         matched = [doc for doc in self.documents if _matches(doc, query)]
         return Cursor(matched)
 
-    async def find_one(self, query):
+    async def find_one(self, query, projection=None):
+        self.last_find_one_query = query
+        self.last_find_one_projection = projection
         for document in self.documents:
             if _matches(document, query):
                 return document
@@ -105,15 +109,55 @@ async def test_get_resumo_uses_primary_document_and_counts_bairros():
                 "co_municipio": "2507507",
                 "municipio": "João Pessoa",
                 "sg_uf": "PB",
-                "total_escolas": 412,
-                "total_matriculas": 98000,
-                "pct_com_biblioteca": 62.3,
-                "pct_com_internet": 88.1,
-                "pct_com_lab_informatica": 45.2,
-                "pct_sem_acessibilidade": 31.0,
+                "total_bairros": 64,
                 "educacao": {
-                    "totalBairros": 64,
+                    "totalEscolas": 412,
+                    "totalMatriculas": 98000,
+                    "pctComBiblioteca": 62.3,
+                    "pctComInternet": 88.1,
+                    "pctComLabInformatica": 45.2,
+                    "pctSemAcessibilidade": 31.0,
                     "mediaIdebAnosIniciais": 5.12,
+                    "mediaIdebAnosFinals": 4.87,
+                },
+                "socioeconomico": {
+                    "anoReferencia": 2022,
+                    "fonte": "IBGE Censo Demográfico 2022",
+                    "populacao": {
+                        "total": 833932,
+                        "totalDomiciliosParticulares": 318000,
+                        "mediaMoradoresPorDomicilio": 2.62,
+                    },
+                    "estruturaEtaria": {
+                        "pctCriancas0a9": 12.4,
+                        "pctIdosos60Mais": 15.1,
+                        "razaoDependencia": 63.0,
+                    },
+                    "raca": {
+                        "pctPretaParda": 66.2,
+                    },
+                    "saneamento": {
+                        "pctAguaRedeGeral": 91.8,
+                        "pctAguaInadequada": 8.2,
+                        "pctEsgotoRedeGeral": 74.6,
+                        "pctEsgotoInadequado": 25.4,
+                        "pctLixoColetado": 98.1,
+                        "pctLixoInadequado": 1.9,
+                    },
+                    "educacaoPopulacao": {
+                        "taxaAnalfabetismo15Mais": 8.1,
+                    },
+                    "familia": {
+                        "pctResponsavelFeminino": 41.7,
+                    },
+                    "mortalidade": {
+                        "totalObitosDomicilios": 136,
+                        "obitosInfantis0a4": 9,
+                    },
+                    "habitacao": {
+                        "pctDomImprovisado": 1.2,
+                        "pctDomSuperlotado": 3.4,
+                    },
                 },
             }
         ]
@@ -141,6 +185,20 @@ async def test_get_resumo_uses_primary_document_and_counts_bairros():
     assert resumo.total_bairros == 64
     assert resumo.tem_bairros_oficiais is True
     assert resumo.mediaIdebAnosIniciais == 5.12
+    assert resumo.mediaIdebAnosFinals == 4.87
+    assert resumo.educacao.totalEscolas == 412
+    assert resumo.educacao.pctComInternet == 88.1
+    assert resumo.socioeconomico.anoReferencia == 2022
+    assert resumo.socioeconomico.fonte == "IBGE Censo Demográfico 2022"
+    assert resumo.socioeconomico.populacao.total == 833932
+    assert resumo.socioeconomico.populacao.totalDomiciliosParticulares == 318000
+    assert resumo.socioeconomico.estruturaEtaria.razaoDependencia == 63.0
+    assert resumo.socioeconomico.saneamento.pctAguaInadequada == 8.2
+    assert resumo.socioeconomico.saneamento.pctEsgotoInadequado == 25.4
+    assert resumo.socioeconomico.saneamento.pctLixoInadequado == 1.9
+    assert resumo.socioeconomico.educacaoPopulacao.taxaAnalfabetismo15Mais == 8.1
+    assert municipio_collection.last_find_one_projection is not None
+    assert "educacao.mediaIdebAnosFinals" in municipio_collection.last_find_one_projection
 
 
 @pytest.mark.asyncio
@@ -153,10 +211,21 @@ async def test_get_resumo_falls_back_to_setor_when_primary_missing():
                 "co_municipio": "2507507",
                 "municipio": "João Pessoa",
                 "uf": "PB",
-                "total_escolas": 80,
-                "total_alunos": 42000,
                 "educacao": {
+                    "totalEscolas": 80,
+                    "totalMatriculas": 42000,
+                    "pctComBiblioteca": 51.2,
+                    "pctComInternet": 91.7,
                     "mediaIdebAnosIniciais": 4.9,
+                    "mediaIdebAnosFinals": 4.2,
+                },
+                "socioeconomico": {
+                    "anoReferencia": 2022,
+                    "fonte": "IBGE Censo Demográfico 2022",
+                    "saneamento": {
+                        "pctAguaRedeGeral": 72.5,
+                        "pctEsgotoRedeGeral": 51.2,
+                    },
                 },
             }
         ]
@@ -177,3 +246,9 @@ async def test_get_resumo_falls_back_to_setor_when_primary_missing():
     assert resumo.total_bairros == 0
     assert resumo.tem_bairros_oficiais is False
     assert resumo.mediaIdebAnosIniciais == 4.9
+    assert resumo.mediaIdebAnosFinals == 4.2
+    assert resumo.socioeconomico.saneamento.pctAguaRedeGeral == 72.5
+    assert resumo.socioeconomico.saneamento.pctEsgotoRedeGeral == 51.2
+    assert resumo.educacao.pctComBiblioteca == 51.2
+    assert resumo.socioeconomico.anoReferencia == 2022
+    assert resumo.socioeconomico.saneamento.pctAguaRedeGeral == 72.5

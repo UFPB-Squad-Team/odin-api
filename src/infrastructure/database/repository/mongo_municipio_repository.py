@@ -1,7 +1,12 @@
 import unicodedata
 from typing import Any
 
-from src.domain.entities.municipio import MunicipioCatalogItem, MunicipioResumo
+from src.domain.entities.municipio import (
+    EducacaoStats,
+    MunicipioCatalogItem,
+    MunicipioResumo,
+    SocioeconomicoStats,
+)
 from src.domain.repository.municipio_repository import IMunicipioRepository
 from src.infrastructure.database.mapper.territorial_aggregation_mapper import (
     TerritorialAggregationMapper,
@@ -71,9 +76,21 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
     ) -> MunicipioResumo | None:
         primary_doc = await self._find_primary_municipio_doc(municipio_id_ibge)
         if primary_doc:
-            return self._build_municipio_resumo(
+            resumo = self._build_municipio_resumo(
                 primary_doc,
                 source="municipio_indicadores",
+            )
+            total_bairros = resumo.total_bairros
+            if total_bairros <= 0:
+                total_bairros = await self._count_official_neighborhoods(
+                    municipio_id_ibge=municipio_id_ibge,
+                    municipio_nome=resumo.municipio,
+                )
+            return resumo.model_copy(
+                update={
+                    "total_bairros": total_bairros,
+                    "tem_bairros_oficiais": total_bairros > 0,
+                }
             )
 
         fallback_docs = await self._aggregate_city_from_setor(
@@ -87,12 +104,60 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
             fallback_docs[0],
             source="setor_indicadores",
         )
-        return resumo
+        total_bairros = resumo.total_bairros
+        if total_bairros <= 0:
+            total_bairros = await self._count_official_neighborhoods(
+                municipio_id_ibge=municipio_id_ibge,
+                municipio_nome=resumo.municipio,
+            )
+        return resumo.model_copy(
+            update={
+                "total_bairros": total_bairros,
+                "tem_bairros_oficiais": total_bairros > 0,
+            }
+        )
 
     async def _find_primary_municipio_doc(self, municipio_id_ibge: str) -> dict[str, Any] | None:
         candidates: list[Any] = [municipio_id_ibge]
         if municipio_id_ibge.isdigit():
             candidates.append(int(municipio_id_ibge))
+
+        projection = {
+            "_id": 1,
+            "co_municipio": 1,
+            "municipioIdIbge": 1,
+            "municipio_id_ibge": 1,
+            "idIbge": 1,
+            "municipio": 1,
+            "nm_municipio": 1,
+            "municipio_nome": 1,
+            "municipioNome": 1,
+            "sg_uf": 1,
+            "uf": 1,
+            "estado_sigla": 1,
+            "estadoSigla": 1,
+            "total_bairros": 1,
+            "totalBairros": 1,
+            "educacao.totalEscolas": 1,
+            "educacao.totalMatriculas": 1,
+            "educacao.totalBairros": 1,
+            "educacao.pctComBiblioteca": 1,
+            "educacao.pctComInternet": 1,
+            "educacao.pctComLabInformatica": 1,
+            "educacao.pctSemAcessibilidade": 1,
+            "educacao.mediaIdebAnosIniciais": 1,
+            "educacao.mediaIdebAnosFinals": 1,
+            "socioeconomico.anoReferencia": 1,
+            "socioeconomico.fonte": 1,
+            "socioeconomico.populacao": 1,
+            "socioeconomico.estruturaEtaria": 1,
+            "socioeconomico.raca": 1,
+            "socioeconomico.saneamento": 1,
+            "socioeconomico.educacaoPopulacao": 1,
+            "socioeconomico.familia": 1,
+            "socioeconomico.mortalidade": 1,
+            "socioeconomico.habitacao": 1,
+        }
 
         for candidate in candidates:
             for field in (
@@ -101,7 +166,7 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
                 "co_municipio",
                 "idIbge",
             ):
-                doc = await self.municipio_collection.find_one({field: candidate})
+                doc = await self.municipio_collection.find_one({field: candidate}, projection)
                 if doc:
                     return doc
 
@@ -141,125 +206,6 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
         }
         return await self.bairro_collection.count_documents(name_query)
 
-    async def _aggregate_city_from_setor(
-        self,
-        *,
-        co_municipio: str,
-        sg_uf: str | None,
-    ) -> list[dict[str, Any]]:
-        match_conditions: list[dict[str, Any]] = [self._municipio_match_query(co_municipio)]
-        if sg_uf:
-            match_conditions.append(
-                {
-                    "$or": [
-                        {"sg_uf": sg_uf},
-                        {"uf": sg_uf},
-                        {"estado_sigla": sg_uf},
-                        {"estadoSigla": sg_uf},
-                    ]
-                }
-            )
-
-        pipeline = [
-            {"$match": {"$and": match_conditions}},
-            {
-                "$project": {
-                    "co_municipio": {"$ifNull": ["$co_municipio", "$municipioIdIbge"]},
-                    "municipio": {"$ifNull": ["$nm_municipio", "$municipio"]},
-                    "uf": {"$ifNull": ["$sg_uf", "$uf"]},
-                    "total_escolas": {
-                        "$ifNull": ["$total_escolas", {"$ifNull": ["$qtd_escolas", 0]}]
-                    },
-                    "total_alunos": {
-                        "$ifNull": [
-                            "$total_alunos",
-                            {"$ifNull": ["$total_matriculas", {"$ifNull": ["$qtd_alunos", 0]}]},
-                        ]
-                    },
-                    "mediaIdebAnosIniciais": {
-                        "$ifNull": [
-                            "$educacao.mediaIdebAnosIniciais",
-                            {"$ifNull": ["$mediaIdebAnosIniciais", "$avg_ideb"]},
-                        ]
-                    },
-                    "pct_com_biblioteca": "$pct_com_biblioteca",
-                    "pct_com_internet": "$pct_com_internet",
-                    "pct_com_lab_informatica": "$pct_com_lab_informatica",
-                    "pct_sem_acessibilidade": "$pct_sem_acessibilidade",
-                    "socioeconomico": "$socioeconomico",
-                    "educacao": "$educacao",
-                    "lon": {
-                        "$ifNull": [
-                            "$longitude",
-                            {
-                                "$ifNull": [
-                                    "$lon",
-                                    {
-                                        "$ifNull": [
-                                            {"$arrayElemAt": ["$centroide.coordinates", 0]},
-                                            {"$arrayElemAt": ["$geometria.coordinates.0.0.0", 0]},
-                                        ]
-                                    },
-                                ]
-                            },
-                        ]
-                    },
-                    "lat": {
-                        "$ifNull": [
-                            "$latitude",
-                            {
-                                "$ifNull": [
-                                    "$lat",
-                                    {
-                                        "$ifNull": [
-                                            {"$arrayElemAt": ["$centroide.coordinates", 1]},
-                                            {"$arrayElemAt": ["$geometria.coordinates.0.0.0", 1]},
-                                        ]
-                                    },
-                                ]
-                            },
-                        ]
-                    },
-                }
-            },
-            {
-                "$group": {
-                    "_id": "$co_municipio",
-                    "co_municipio": {"$first": "$co_municipio"},
-                    "municipio": {"$first": "$municipio"},
-                    "uf": {"$first": "$uf"},
-                    "total_escolas": {"$sum": "$total_escolas"},
-                    "total_alunos": {"$sum": "$total_alunos"},
-                    "mediaIdebAnosIniciais": {"$avg": "$mediaIdebAnosIniciais"},
-                    "pct_com_biblioteca": {"$avg": "$pct_com_biblioteca"},
-                    "pct_com_internet": {"$avg": "$pct_com_internet"},
-                    "pct_com_lab_informatica": {"$avg": "$pct_com_lab_informatica"},
-                    "pct_sem_acessibilidade": {"$avg": "$pct_sem_acessibilidade"},
-                    "avg_lon": {"$avg": "$lon"},
-                    "avg_lat": {"$avg": "$lat"},
-                }
-            },
-            {
-                "$project": {
-                    "_id": 0,
-                    "co_municipio": 1,
-                    "municipio": 1,
-                    "uf": 1,
-                    "total_escolas": 1,
-                    "total_alunos": 1,
-                    "mediaIdebAnosIniciais": 1,
-                    "pct_com_biblioteca": 1,
-                    "pct_com_internet": 1,
-                    "pct_com_lab_informatica": 1,
-                    "pct_sem_acessibilidade": 1,
-                    "avg_lon": 1,
-                    "avg_lat": 1,
-                }
-            },
-        ]
-
-        return await self.setor_collection.aggregate(pipeline).to_list(length=None)
-
     def _build_municipio_resumo(
         self,
         doc: dict[str, Any],
@@ -272,10 +218,55 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
             include_geometria=False,
         )
 
+        educacao_doc = doc.get("educacao") if isinstance(doc.get("educacao"), dict) else {}
+        educacao_payload: dict[str, Any] = dict(educacao_doc) if educacao_doc else {}
+        educacao_payload.setdefault("totalEscolas", city.total_escolas)
+        educacao_payload.setdefault("totalMatriculas", city.total_alunos)
+        educacao_payload.setdefault("pctComBiblioteca", city.pct_com_biblioteca)
+        educacao_payload.setdefault("pctComInternet", city.pct_com_internet)
+        educacao_payload.setdefault("pctComLabInformatica", city.pct_com_lab_informatica)
+        educacao_payload.setdefault("pctSemAcessibilidade", city.pct_sem_acessibilidade)
+        educacao_payload.setdefault(
+            "mediaIdebAnosIniciais",
+            TerritorialAggregationMapper._as_float(
+                TerritorialAggregationMapper._pick_nested(
+                    doc,
+                    ("educacao", "mediaIdebAnosIniciais"),
+                    default=TerritorialAggregationMapper._pick(
+                        doc,
+                        "mediaIdebAnosIniciais",
+                        default=None,
+                    ),
+                )
+            ),
+        )
+        educacao_payload.setdefault(
+            "mediaIdebAnosFinals",
+            TerritorialAggregationMapper._as_float(
+                TerritorialAggregationMapper._pick_nested(
+                    doc,
+                    ("educacao", "mediaIdebAnosFinals"),
+                    default=TerritorialAggregationMapper._pick(
+                        doc,
+                        "mediaIdebAnosFinals",
+                        default=None,
+                    ),
+                )
+            ),
+        )
+        educacao = EducacaoStats.model_validate(educacao_payload)
+
+        socioeconomico_doc = (
+            doc.get("socioeconomico") if isinstance(doc.get("socioeconomico"), dict) else {}
+        )
+        socioeconomico_payload: dict[str, Any] = dict(socioeconomico_doc) if socioeconomico_doc else {}
+        socioeconomico = SocioeconomicoStats.model_validate(socioeconomico_payload)
+
         total_bairros = TerritorialAggregationMapper._as_int(
             TerritorialAggregationMapper._pick_nested(
                 doc,
                 ("educacao", "totalBairros"),
+                ("educacao", "total_bairros"),
                 default=TerritorialAggregationMapper._pick(
                     doc,
                     "totalBairros",
@@ -285,34 +276,14 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
             )
         ) or 0
 
-        media_ideb_anos_iniciais = TerritorialAggregationMapper._as_float(
-            TerritorialAggregationMapper._pick_nested(
-                doc,
-                ("educacao", "mediaIdebAnosIniciais"),
-                default=TerritorialAggregationMapper._pick(
-                    doc,
-                    "mediaIdebAnosIniciais",
-                    "avg_ideb",
-                    "ideb_medio",
-                    "ideb",
-                    default=None,
-                ),
-            )
-        )
-
         return MunicipioResumo(
             municipioIdIbge=city.co_municipio,
             municipio=city.municipio,
             sg_uf=city.uf,
-            total_escolas=city.total_escolas,
-            total_matriculas=city.total_alunos,
             total_bairros=total_bairros,
-            pct_com_biblioteca=city.pct_com_biblioteca,
-            pct_com_internet=city.pct_com_internet,
-            pct_com_lab_informatica=city.pct_com_lab_informatica,
-            pct_sem_acessibilidade=city.pct_sem_acessibilidade,
-            mediaIdebAnosIniciais=media_ideb_anos_iniciais,
             tem_bairros_oficiais=total_bairros > 0,
+            educacao=educacao,
+            socioeconomico=socioeconomico,
             source=source,
         )
 
@@ -354,13 +325,8 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
         return [candidate for candidate in candidates if candidate]
 
     @staticmethod
-    def _resolve_municipality_name(doc: dict[str, Any]) -> str | None:
-        name = TerritorialAggregationMapper._pick(
-            doc,
-            "municipio",
-            "nm_municipio",
-            "municipio_nome",
-            "municipioNome",
-            default=None,
-        )
-        return str(name) if name else None
+    def _sort_key(value: str | None) -> str:
+        if not value:
+            return ""
+        normalized = unicodedata.normalize("NFKD", value)
+        return "".join(char for char in normalized if not unicodedata.combining(char)).casefold()
