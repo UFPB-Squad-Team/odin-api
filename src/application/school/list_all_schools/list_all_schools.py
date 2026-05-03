@@ -31,5 +31,14 @@ class ListAllSchools:
                 )
             )
 
+        if dto.municipio_id:
+            filters.append(
+                QueryFilter(
+                    field="municipio_id_ibge",
+                    operator="eq",
+                    value=dto.municipio_id,
+                )
+            )
+
         dto.query.filters = filters
         return await self.school_repository.find_paginated(dto.query)

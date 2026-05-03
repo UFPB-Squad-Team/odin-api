@@ -8,7 +8,7 @@ from bson.errors import InvalidId
 from src.domain.entities.school import School
 from src.domain.repository.school_repository import ISchoolRepository
 from src.domain.value_objects.pagination import PaginatedResponse
-from src.domain.value_objects.query import QueryOptions, QuerySort
+from src.domain.value_objects.query import QueryFilter, QueryOptions, QuerySort
 from src.infrastructure.database.config.app_config import config
 
 from ..mapper.school_mapper import MongoSchoolMapper
@@ -166,6 +166,54 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
 
     async def find_paginated(self, query: QueryOptions) -> PaginatedResponse[School]:
         return await super().find_paginated(query)
+
+    def _build_filters(self, filters: list[QueryFilter]) -> dict:
+        if not filters:
+            return {}
+
+        clauses: list[dict] = []
+        regular_filters: list[QueryFilter] = []
+
+        for item in filters:
+            if item.field != "municipio_id_ibge":
+                regular_filters.append(item)
+                continue
+
+            if item.operator == "eq":
+                municipio_values = self._build_municipio_id_values(str(item.value))
+            elif item.operator == "in":
+                municipio_values = []
+                for value in item.value:
+                    municipio_values.extend(self._build_municipio_id_values(str(value)))
+            else:
+                regular_filters.append(item)
+                continue
+
+            unique_values: list[str | int] = []
+            for value in municipio_values:
+                if value not in unique_values:
+                    unique_values.append(value)
+
+            clauses.append(
+                {
+                    "$or": [
+                        {"municipioIdIbge": {"$in": unique_values}},
+                        {"municipio_id_ibge": {"$in": unique_values}},
+                        {"co_municipio": {"$in": unique_values}},
+                        {"idIbge": {"$in": unique_values}},
+                    ]
+                }
+            )
+
+        regular_clause = super()._build_filters(regular_filters)
+        if regular_clause:
+            clauses.append(regular_clause)
+
+        if not clauses:
+            return {}
+        if len(clauses) == 1:
+            return clauses[0]
+        return {"$and": clauses}
 
     async def get_paraiba_geojson(self, municipio_id: str | None = None) -> dict:
         await self._ensure_geojson_indexes()

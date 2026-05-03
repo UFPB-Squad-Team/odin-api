@@ -383,6 +383,32 @@ async def test_school_list_route_accepts_municipio_only_search(monkeypatch):
     assert response.status_code == 200
     assert fake_use_case.received_dto.search_term is None
     assert fake_use_case.received_dto.municipio == "Joao Pessoa"
+    assert fake_use_case.received_dto.municipio_id is None
+
+
+@pytest.mark.asyncio
+async def test_school_list_route_accepts_municipio_id_filter(monkeypatch):
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
+
+    from src.infrastructure.database.config.connect_db import mongodb
+    monkeypatch.setattr(mongodb, "connect", fake_connect)
+    monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+
+    fake_use_case = FakeListAllSchoolsUseCase()
+    app.dependency_overrides[get_list_all_schools_use_case] = lambda: fake_use_case
+    app.dependency_overrides[get_school_by_id_use_case] = lambda: FakeGetSchoolByIdUseCase()
+    app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: FakeGetParaibaGeoJsonUseCase()
+    app.dependency_overrides[get_bairros_geojson_use_case] = lambda: FakeGetBairrosGeoJsonUseCase()
+    app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/v1/schools?municipio_id=2500106")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert fake_use_case.received_dto.municipio_id == "2500106"
 
 
 @pytest.mark.asyncio
@@ -409,6 +435,7 @@ async def test_school_list_route_accepts_combined_search_and_municipio(monkeypat
     assert response.status_code == 200
     assert fake_use_case.received_dto.search_term == "estadual"
     assert fake_use_case.received_dto.municipio == "Joao Pessoa"
+    assert fake_use_case.received_dto.municipio_id is None
 
 
 @pytest.mark.asyncio
@@ -440,6 +467,41 @@ async def test_school_list_route_preserves_filters_and_cursor_with_search_params
     assert payload["page_size"] == 10
     assert payload["next_cursor"] == "cursor-123"
     assert "total_items" in payload
+    assert fake_use_case.received_dto.query.cursor == "cursor-123"
+    assert fake_use_case.received_dto.query.filters == [
+        QueryFilter(field="bairro", operator="eq", value="Centro")
+    ]
+
+
+@pytest.mark.asyncio
+async def test_school_list_route_preserves_filters_and_cursor_with_municipio_id(monkeypatch):
+    async def fake_connect(): return True
+    async def fake_disconnect(): return None
+
+    from src.infrastructure.database.config.connect_db import mongodb
+    monkeypatch.setattr(mongodb, "connect", fake_connect)
+    monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+
+    fake_use_case = FakeListAllSchoolsUseCase()
+    app.dependency_overrides[get_list_all_schools_use_case] = lambda: fake_use_case
+    app.dependency_overrides[get_school_by_id_use_case] = lambda: FakeGetSchoolByIdUseCase()
+    app.dependency_overrides[get_paraiba_geojson_use_case] = lambda: FakeGetParaibaGeoJsonUseCase()
+    app.dependency_overrides[get_bairros_geojson_use_case] = lambda: FakeGetBairrosGeoJsonUseCase()
+    app.dependency_overrides[get_bairro_by_school_id_use_case] = lambda: FakeGetBairroBySchoolIdUseCase()
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            "/api/v1/schools?municipio_id=2500106&cursor=cursor-123&filter[bairro]=Centro&page=1&page_size=10"
+        )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["page"] == 1
+    assert payload["page_size"] == 10
+    assert payload["next_cursor"] == "cursor-123"
+    assert fake_use_case.received_dto.municipio_id == "2500106"
     assert fake_use_case.received_dto.query.cursor == "cursor-123"
     assert fake_use_case.received_dto.query.filters == [
         QueryFilter(field="bairro", operator="eq", value="Centro")

@@ -33,8 +33,9 @@ class ListAllSchoolsController:
     async def handle(
         self,
         request: Request,
-        search_term: str | None = None, 
-        municipio: str | None = None, 
+        search_term: str | None = None,
+        municipio: str | None = None,
+        municipio_id: str | None = None,
     ):
         query = QueryParamParser.parse(
             query_params=request.query_params,
@@ -50,7 +51,8 @@ class ListAllSchoolsController:
         dto = ListSchoolsDTO(
             query=search_schema.to_query_options(),
             search_term=search_term,
-            municipio=municipio 
+            municipio=municipio,
+            municipio_id=municipio_id,
         )
 
         return await self.list_all_schools_use_case.execute(dto=dto)
@@ -65,14 +67,14 @@ async def list_all_schools_endpoint(
     request: Request,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=config.max_page_size),
-    search: str | None = Query(None), 
-    municipio: str | None = Query(None), 
+    search: str | None = Query(None),
+    municipio: str | None = Query(None),
+    municipio_id: str | None = Query(None),
     list_all_schools_use_case: ListAllSchools = Depends(
         get_list_all_schools_use_case
     ),
 ):
-
-    cursor = request.query_params.get("cursor") 
+    cursor = request.query_params.get("cursor")
     offset = (page - 1) * page_size
     if not cursor and offset > config.max_offset_records:
         raise HTTPException(
@@ -84,15 +86,12 @@ async def list_all_schools_endpoint(
         )
 
     controller = ListAllSchoolsController(list_all_schools_use_case)
-
-    
     result = await controller.handle(
-        request=request, 
+        request=request,
         search_term=search,
-        municipio=municipio
+        municipio=municipio,
+        municipio_id=municipio_id,
     )
-
-    
     return PaginatedSchoolResponse(
         schools=result.items,
         total_items=result.total_items,

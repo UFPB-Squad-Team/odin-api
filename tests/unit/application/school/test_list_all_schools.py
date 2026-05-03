@@ -31,6 +31,7 @@ async def test_execute_appends_fuzzy_filters_and_preserves_query_options():
         ),
         search_term="estadual",
         municipio="Joao Pessoa",
+        municipio_id="2507507",
     )
 
     result = await use_case.execute(dto)
@@ -46,6 +47,7 @@ async def test_execute_appends_fuzzy_filters_and_preserves_query_options():
         QueryFilter(field="bairro", operator="eq", value="Centro"),
         QueryFilter(field="escola_nome", operator="contains", value="estadual"),
         QueryFilter(field="municipio_nome", operator="contains", value="Joao Pessoa"),
+        QueryFilter(field="municipio_id_ibge", operator="eq", value="2507507"),
     ]
     assert result.next_cursor == "next-token"
 
