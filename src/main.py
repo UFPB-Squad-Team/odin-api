@@ -4,6 +4,12 @@ from src.presentation.http.controller.school.container import container as schoo
 from src.presentation.http.controller.school.index import (
     router as school_controller,
 )
+from src.presentation.http.controller.municipio.container import (
+    container as municipio_container,
+)
+from src.presentation.http.controller.municipio.index import (
+    router as municipio_controller,
+)
 from src.presentation.http.controller.aggregation.container import (
     container as aggregation_container,
 )
@@ -23,6 +29,10 @@ school_container.wire(modules=[
     "src.presentation.http.controller.school.list_all_schools_controller",
     "src.presentation.http.controller.school.get_school_by_id_controller",
     "src.presentation.http.controller.school.geojson_controller",
+])
+
+municipio_container.wire(modules=[
+    "src.presentation.http.controller.municipio.municipios_controller",
 ])
 
 aggregation_container.wire(modules=[
@@ -58,5 +68,6 @@ app = FastAPI(
 
 register_global_exception_handlers(app)
 
+app.include_router(municipio_controller, prefix="/api/v1", tags=["municipios"])
 app.include_router(school_controller, prefix="/api/v1", tags=["schools"])
 app.include_router(aggregation_controller, prefix="/api/v1", tags=["aggregations"])
