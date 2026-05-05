@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from src.infrastructure.database.config.app_config import config
 from src.presentation.http.controller.school.container import container as school_container
 from src.presentation.http.controller.school.index import (
@@ -39,25 +40,17 @@ aggregation_container.wire(modules=[
     "src.presentation.http.controller.aggregation.aggregations_controller",
 ])
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(
-        f"Server is starting on port {config.port} "
-        f"in {config.environment}"
-    )
-
+    print(f"Server is starting on port {config.port} "
+          f"in {config.environment}")
     print(f"Documentation: http://localhost:{config.port}/docs")
-
     success = await mongodb.connect()
     if not success:
         raise RuntimeError("Failed to connect to database")
-
     yield
-
     await mongodb.disconnect()
     print("Server shutdown")
-
 
 app = FastAPI(
     title="Odin Backend API",
@@ -65,6 +58,15 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 register_global_exception_handlers(app)
 
