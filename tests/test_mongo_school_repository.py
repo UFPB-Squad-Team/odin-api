@@ -53,6 +53,49 @@ async def test_repository_uses_count_documents_when_filters_exist():
 
 
 @pytest.mark.asyncio
+async def test_repository_filters_municipio_id_across_legacy_fields():
+    collection = FakeCollection([build_school_document("school-1")])
+    repository = MongoSchoolRepository(collection=collection)
+
+    query = QueryOptions(
+        page=1,
+        page_size=10,
+        filters=[QueryFilter(field="municipio_id_ibge", operator="eq", value="2516805")],
+    )
+
+    await repository.find_paginated(query)
+
+    assert collection.find_args is not None
+    mongo_query, _ = collection.find_args
+    assert "$or" in mongo_query
+    assert {"municipioIdIbge": {"$in": ["2516805", 2516805]}} in mongo_query["$or"]
+    assert {"co_municipio": {"$in": ["2516805", 2516805]}} in mongo_query["$or"]
+
+
+@pytest.mark.asyncio
+async def test_repository_combines_municipio_id_with_other_filters():
+    collection = FakeCollection([build_school_document("school-1")])
+    repository = MongoSchoolRepository(collection=collection)
+
+    query = QueryOptions(
+        page=1,
+        page_size=10,
+        filters=[
+            QueryFilter(field="bairro", operator="eq", value="Centro"),
+            QueryFilter(field="municipio_id_ibge", operator="eq", value="2516805"),
+        ],
+    )
+
+    await repository.find_paginated(query)
+
+    assert collection.find_args is not None
+    mongo_query, _ = collection.find_args
+    assert "$and" in mongo_query
+    assert {"endereco.bairro": "Centro"} in mongo_query["$and"]
+    assert any("$or" in clause for clause in mongo_query["$and"])
+
+
+@pytest.mark.asyncio
 async def test_repository_get_by_id_uses_object_id_when_possible():
     object_id = ObjectId("68c8d9747e1b2e5af20f3cd6")
     collection = FakeCollection([build_school_document(object_id)])
