@@ -13,16 +13,23 @@ class FakeGetCityAggregationsUseCase:
         self,
         co_municipio: str | None = None,
         sg_uf: str | None = None,
+        include_geometria: bool = False,
     ):
         source = "setor_indicadores" if co_municipio == "2507507" else "municipio_indicadores"
         resolved_uf = sg_uf or "PB"
+        geometry = {"type": "Point", "coordinates": [-34.86, -7.12]}
+        if include_geometria:
+            geometry = {
+                "type": "Polygon",
+                "coordinates": [[[-34.9, -7.2], [-34.8, -7.2], [-34.8, -7.1], [-34.9, -7.1], [-34.9, -7.2]]],
+            }
         return {
             "type": "FeatureCollection",
             "features": [
                 {
                     "type": "Feature",
                     "id": co_municipio or "2507507",
-                    "geometry": {"type": "Point", "coordinates": [-34.86, -7.12]},
+                    "geometry": geometry,
                     "properties": {
                         "municipioIdIbge": co_municipio or "2507507",
                         "co_municipio": co_municipio or "2507507",
@@ -31,6 +38,11 @@ class FakeGetCityAggregationsUseCase:
                         "total_escolas": 123,
                         "total_alunos": 45678,
                         "avg_ideb": 5.1,
+                        "socioeconomico": {
+                            "anoReferencia": 2022,
+                            "fonte": "IBGE Censo Demografico 2022",
+                            "populacao": {"total": 817511},
+                        },
                         "source": source,
                     },
                 }
@@ -65,8 +77,19 @@ class FakeGetNeighborhoodAggregationsUseCase:
                 "sg_uf": "PB",
                 "total_escolas": 10,
                 "total_matriculas": 4500,
-                "tem_bairro_official": bairro is not None,
-                "source": "bairro_indicadores",
+                "tem_bairro_oficial": bairro is not None,
+                "nivel": "bairro",
+                "socioeconomico": {
+                    "anoReferencia": 2022,
+                    "fonte": "IBGE",
+                    "populacao": {"total": 14000},
+                },
+                "educacao": {
+                    "totalEscolas": 10,
+                    "totalMatriculas": 4500,
+                    "pctComInternet": 100,
+                },
+                "source": "bairros_indicadores",
             }
         ]
 
@@ -98,6 +121,7 @@ async def test_get_city_aggregations_route_returns_200_and_feature_collection(mo
     assert payload["type"] == "FeatureCollection"
     assert payload["features"][0]["properties"]["source"] == "setor_indicadores"
     assert payload["features"][0]["geometry"]["coordinates"] == [-34.86, -7.12]
+    assert payload["features"][0]["properties"]["socioeconomico"]["anoReferencia"] == 2022
 
 
 @pytest.mark.asyncio
@@ -128,7 +152,11 @@ async def test_get_neighborhood_aggregations_route_returns_200(monkeypatch):
     assert payload[0]["_id"] == "69e211325157cf0f20312a59"
     assert payload[0]["bairro"] == "Area Urbana Integrada"
     assert payload[0]["geometria"] is None
-    assert payload[0]["source"] == "bairro_indicadores"
+    assert payload[0]["tem_bairro_oficial"] is False
+    assert payload[0]["nivel"] == "bairro"
+    assert payload[0]["socioeconomico"]["anoReferencia"] == 2022
+    assert payload[0]["educacao"]["totalMatriculas"] == 4500
+    assert payload[0]["source"] == "bairros_indicadores"
 
 
 @pytest.mark.asyncio
@@ -157,7 +185,12 @@ async def test_get_neighborhood_aggregations_route_can_include_geometria(monkeyp
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload[0]["geometria"]["type"] == "Point"
+    assert payload["type"] == "FeatureCollection"
+    assert payload["features"][0]["geometry"]["type"] == "Point"
+    assert payload["features"][0]["properties"]["tem_bairro_oficial"] is False
+    assert payload["features"][0]["properties"]["nivel"] == "bairro"
+    assert payload["features"][0]["properties"]["socioeconomico"]["anoReferencia"] == 2022
+    assert payload["features"][0]["properties"]["educacao"]["totalMatriculas"] == 4500
 
 
 @pytest.mark.asyncio
@@ -185,6 +218,33 @@ async def test_get_city_aggregations_route_accepts_sg_uf_filter(monkeypatch):
     assert response.status_code == 200
     payload = response.json()
     assert payload["features"][0]["properties"]["uf"] == "PB"
+
+
+@pytest.mark.asyncio
+async def test_get_city_aggregations_route_can_include_full_geometry(monkeypatch):
+    async def fake_connect():
+        return True
+
+    async def fake_disconnect():
+        return None
+
+    from src.infrastructure.database.config.connect_db import mongodb
+
+    monkeypatch.setattr(mongodb, "connect", fake_connect)
+    monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+    app.dependency_overrides[get_city_aggregations_use_case] = (
+        lambda: FakeGetCityAggregationsUseCase()
+    )
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/v1/aggregations/cities?include_geometria=true")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["features"][0]["geometry"]["type"] == "Polygon"
 
 
 @pytest.mark.asyncio

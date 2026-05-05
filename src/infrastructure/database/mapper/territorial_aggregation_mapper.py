@@ -20,6 +20,30 @@ class TerritorialAggregationMapper:
         except (TypeError, ValueError):
             return None
 
+    @staticmethod
+    def _as_int(value: Any) -> int | None:
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _pick_nested(doc: dict[str, Any], *paths: tuple[str, ...], default: Any = None) -> Any:
+        for path in paths:
+            current: Any = doc
+            found = True
+            for key in path:
+                if isinstance(current, dict) and key in current and current[key] is not None:
+                    current = current[key]
+                else:
+                    found = False
+                    break
+            if found:
+                return current
+        return default
+
     @classmethod
     def _flatten_lon_lat_pairs(cls, value: Any) -> list[tuple[float, float]]:
         pairs: list[tuple[float, float]] = []
@@ -70,13 +94,90 @@ class TerritorialAggregationMapper:
         return None
 
     @classmethod
+    def _extract_full_geometry(cls, doc: dict[str, Any]) -> dict[str, Any] | None:
+        geo = cls._pick(doc, "geometria", "geometry")
+        if isinstance(geo, dict) and "type" in geo and "coordinates" in geo:
+            return geo
+
+        centroid = cls._pick(doc, "centroide", "centroid", "localizacao")
+        if isinstance(centroid, dict) and "coordinates" in centroid:
+            return {
+                "type": centroid.get("type", "Point"),
+                "coordinates": centroid["coordinates"],
+            }
+
+        coords = cls._extract_coordinates(doc)
+        if coords:
+            return {"type": "Point", "coordinates": [coords[0], coords[1]]}
+
+        return None
+
+    @classmethod
     def city_from_doc(
         cls,
         doc: dict[str, Any],
         *,
         source: str,
+        include_geometria: bool = False,
     ) -> CitySummary:
         doc_id = str(doc.get("_id", "")) if doc.get("_id") else None
+
+        total_escolas = cls._as_int(
+            cls._pick_nested(
+                doc,
+                ("educacao", "totalEscolas"),
+                ("educacao", "total_escolas"),
+                default=cls._pick(doc, "total_escolas", "qtd_escolas", "escolas", default=0),
+            )
+        )
+        total_alunos = cls._as_int(
+            cls._pick_nested(
+                doc,
+                ("educacao", "totalMatriculas"),
+                ("educacao", "total_matriculas"),
+                default=cls._pick(
+                    doc,
+                    "total_alunos",
+                    "total_matriculas",
+                    "qtd_alunos",
+                    "alunos",
+                    default=0,
+                ),
+            )
+        )
+        pct_com_biblioteca = cls._as_float(
+            cls._pick_nested(
+                doc,
+                ("educacao", "pctComBiblioteca"),
+                ("educacao", "pct_com_biblioteca"),
+                default=cls._pick(doc, "pct_com_biblioteca"),
+            )
+        )
+        pct_com_internet = cls._as_float(
+            cls._pick_nested(
+                doc,
+                ("educacao", "pctComInternet"),
+                ("educacao", "pct_com_internet"),
+                default=cls._pick(doc, "pct_com_internet"),
+            )
+        )
+        pct_com_lab_informatica = cls._as_float(
+            cls._pick_nested(
+                doc,
+                ("educacao", "pctComLabInformatica"),
+                ("educacao", "pct_com_lab_informatica"),
+                default=cls._pick(doc, "pct_com_lab_informatica"),
+            )
+        )
+        pct_sem_acessibilidade = cls._as_float(
+            cls._pick_nested(
+                doc,
+                ("educacao", "pctSemAcessibilidade"),
+                ("educacao", "pct_sem_acessibilidade"),
+                default=cls._pick(doc, "pct_sem_acessibilidade"),
+            )
+        )
+
         return CitySummary(
             mongoId=doc_id,
             co_municipio=str(
@@ -91,31 +192,26 @@ class TerritorialAggregationMapper:
                 )
             ),
             municipio=str(
-                cls._pick(doc, "nm_municipio", "municipio", "municipio_nome", default="")
-            ),
-            uf=cls._pick(doc, "sg_uf", "estado_sigla", "uf"),
-            total_escolas=int(
-                cls._pick(doc, "total_escolas", "qtd_escolas", "escolas", default=0)
-            ),
-            total_alunos=int(
                 cls._pick(
                     doc,
-                    "total_alunos",
-                    "total_matriculas",
-                    "qtd_alunos",
-                    "alunos",
-                    default=0,
+                    "nm_municipio",
+                    "municipio",
+                    "municipio_nome",
+                    "municipioNome",
+                    default="",
                 )
             ),
+            uf=cls._pick(doc, "sg_uf", "estado_sigla", "estadoSigla", "uf"),
+            total_escolas=total_escolas or 0,
+            total_alunos=total_alunos or 0,
             avg_ideb=cls._as_float(cls._pick(doc, "avg_ideb", "ideb_medio", "ideb")),
-            pct_com_biblioteca=cls._as_float(cls._pick(doc, "pct_com_biblioteca")),
-            pct_com_internet=cls._as_float(cls._pick(doc, "pct_com_internet")),
-            pct_com_lab_informatica=cls._as_float(
-                cls._pick(doc, "pct_com_lab_informatica")
-            ),
-            pct_sem_acessibilidade=cls._as_float(
-                cls._pick(doc, "pct_sem_acessibilidade")
-            ),
+            pct_com_biblioteca=pct_com_biblioteca,
+            pct_com_internet=pct_com_internet,
+            pct_com_lab_informatica=pct_com_lab_informatica,
+            pct_sem_acessibilidade=pct_sem_acessibilidade,
+            socioeconomico=doc.get("socioeconomico") if isinstance(doc.get("socioeconomico"), dict) else None,
+            educacao=doc.get("educacao") if isinstance(doc.get("educacao"), dict) else None,
+            full_geometry=cls._extract_full_geometry(doc) if include_geometria else None,
             coordinates=cls._extract_coordinates(doc),
             source=source,
         )
@@ -182,18 +278,20 @@ class TerritorialAggregationMapper:
 
     @staticmethod
     def city_to_feature(city: CitySummary) -> dict[str, Any]:
-        if city.coordinates is None:
-            coordinates = [0.0, 0.0]
+        if city.full_geometry:
+            geometry = city.full_geometry
+        elif city.coordinates is not None:
+            geometry = {
+                "type": "Point",
+                "coordinates": [float(city.coordinates[0]), float(city.coordinates[1])],
+            }
         else:
-            coordinates = [float(city.coordinates[0]), float(city.coordinates[1])]
+            geometry = {"type": "Point", "coordinates": [0.0, 0.0]}
 
         feature = {
             "type": "Feature",
             "id": city.co_municipio,
-            "geometry": {
-                "type": "Point",
-                "coordinates": coordinates,
-            },
+            "geometry": geometry,
             "properties": {
                 "municipioIdIbge": city.co_municipio,
                 "co_municipio": city.co_municipio,
@@ -206,6 +304,8 @@ class TerritorialAggregationMapper:
                 "pct_com_internet": city.pct_com_internet,
                 "pct_com_lab_informatica": city.pct_com_lab_informatica,
                 "pct_sem_acessibilidade": city.pct_sem_acessibilidade,
+                "socioeconomico": city.socioeconomico,
+                "educacao": city.educacao,
                 "source": city.source,
             },
         }
