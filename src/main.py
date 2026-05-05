@@ -49,7 +49,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Adicionar CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.cors_origins,
