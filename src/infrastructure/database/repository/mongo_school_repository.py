@@ -350,6 +350,30 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
 
         return {"type": "FeatureCollection", "features": features}
 
+    async def get_by_inep_id(self, inep_id: str | int) -> School | None:
+        """
+        Return a School domain object by its INEP identifier (`escolaIdInep`).
+        """
+        candidates: list[dict] = []
+
+        if isinstance(inep_id, int):
+            candidates.append({"escolaIdInep": inep_id})
+            candidates.append({"escola_id_inep": inep_id})
+        else:
+            candidates.append({"escolaIdInep": inep_id})
+            candidates.append({"escola_id_inep": inep_id})
+            if str(inep_id).isdigit():
+                candidates.append({"escolaIdInep": int(inep_id)})
+                candidates.append({"escola_id_inep": int(inep_id)})
+
+        query = {"$or": candidates}
+
+        doc = await self.collection.find_one(query)
+        if not doc:
+            return None
+
+        return self.mapper_to_domain(doc)
+
     async def get_bairro_by_school_id(self, school_id: str) -> dict | None:
         candidates = [{"_id": school_id}]
 
