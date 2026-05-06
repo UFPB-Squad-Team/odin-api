@@ -9,4 +9,4 @@ class GetSchoolById:
         self.school_repository = school_repository
 
     async def execute(self, dto: GetSchoolByIdDTO) -> Optional[School]:
-        return await self.school_repository.get_by_id(dto.id)
+        return await self.school_repository.get_by_inep_id(dto.escola_id_inep)

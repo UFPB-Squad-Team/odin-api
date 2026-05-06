@@ -119,6 +119,13 @@ class ISchoolRepository(IBaseReadRepository[School], ABC):
         ...
 
     @abstractmethod
+    async def get_by_inep_id(self, inep_id: str | int) -> Optional[School]:
+        """
+        Retrieves a single school by its INEP identifier (`escolaIdInep`).
+        """
+        ...
+
+    @abstractmethod
     async def list_all(self, page: int, page_size: int) -> PaginatedResponse[School]:
         """
         Retrieves a paginated list of all schools.
