@@ -2,7 +2,7 @@ from src.infrastructure.database.repository.base_mongo_repository import BaseMon
 
 class MongoStatsRepository:
     def __init__(self, collection):
-        # Recebemos apenas a collection limpa
+    
         self.collection = collection
 
     async def get_summary_stats(self) -> dict:

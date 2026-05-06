@@ -1,8 +1,4 @@
 from dependency_injector import containers, providers
-from src.infrastructure.database.config.connect_db import mongodb
-from src.infrastructure.database.repository.mongo_stats_repository import MongoStatsRepository
-from src.application.stats.get_summary_stats_use_case import GetSummaryStatsUseCase
-from dependency_injector import containers, providers
 from src.infrastructure.database.repository import mongo_school_repository
 from src.infrastructure.database.config.connect_db import mongodb
 from src.application.school.list_all_schools.list_all_schools import ListAllSchools

@@ -1,4 +1,3 @@
-from src.application.stats.get_summary_stats_use_case import GetSummaryStatsUseCase
 from ..container import container
 from src.application.school.list_all_schools.list_all_schools import (
     ListAllSchools,
@@ -9,10 +8,13 @@ from src.application.school.get_school_by_id.get_school_by_id import (
 from src.application.school.geojson.get_paraiba_geojson import GetParaibaGeoJson
 from src.application.school.geojson.get_bairros_geojson import GetBairrosGeoJson
 from src.application.school.geojson.get_bairro_by_school_id import GetBairroBySchoolId
+from src.application.stats.get_summary_stats_use_case import GetSummaryStatsUseCase
+
 
 def get_list_all_schools_use_case() -> ListAllSchools:
     """Resolve and return an instance of the Use Case."""
     return container.list_all_schools_use_case()
+
 
 def get_school_by_id_use_case() -> GetSchoolById:
     """Resolve and return an instance of the Use Case."""
@@ -30,8 +32,6 @@ def get_bairros_geojson_use_case() -> GetBairrosGeoJson:
 def get_bairro_by_school_id_use_case() -> GetBairroBySchoolId:
     return container.get_bairro_by_school_id_use_case()
 
-def get_summary_stats_use_case():
-    return container.get_summary_stats_use_case()
 
 def get_summary_stats_use_case() -> GetSummaryStatsUseCase:
     return container.get_summary_stats_use_case()
