@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 from src.application.school.geojson.get_bairros_geojson import GetBairrosGeoJson
 from src.application.school.geojson.get_bairro_by_school_id import GetBairroBySchoolId
@@ -20,9 +20,16 @@ router = APIRouter()
 
 @router.get("/escolas/geojson/paraiba", response_model=ParaibaSchoolFeatureCollection)
 async def get_paraiba_geojson_endpoint(
+    municipio_id: str | None = Query(
+        default=None,
+        min_length=7,
+        max_length=7,
+        pattern=r"^\d{7}$",
+        description="Codigo IBGE do municipio para filtrar escolas",
+    ),
     use_case: GetParaibaGeoJson = Depends(get_paraiba_geojson_use_case),
 ):
-    return await use_case.execute()
+    return await use_case.execute(municipio_id=municipio_id)
 
 
 @router.get("/bairros/geojson/{municipio}", response_model=BairroGeoJsonFeatureCollection)

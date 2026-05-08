@@ -9,9 +9,11 @@ class GeoJsonPointGeometry(BaseModel):
 
 
 class ParaibaSchoolProperties(BaseModel):
+    id: str | None = None
     escola_nome: str | None = None
     escola_id_inep: int | None = None
     municipio_nome: str | None = None
+    municipioIdIbge: str | None = None
     bairro: str | None = None
     dependencia_adm: str | None = None
     tipo_localizacao: str | None = None

@@ -1,8 +1,15 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from src.infrastructure.database.config.app_config import config
 from src.presentation.http.controller.school.container import container as school_container
 from src.presentation.http.controller.school.index import (
     router as school_controller,
+)
+from src.presentation.http.controller.municipio.container import (
+    container as municipio_container,
+)
+from src.presentation.http.controller.municipio.index import (
+    router as municipio_controller,
 )
 from src.presentation.http.controller.aggregation.container import (
     container as aggregation_container,
@@ -31,22 +38,23 @@ aggregation_container.wire(modules=[
     "src.presentation.http.controller.aggregation.aggregations_controller",
 ])
 
+municipio_container.wire(modules=[
+    "src.presentation.http.controller.municipio.municipios_controller",
+])
+
+aggregation_container.wire(modules=[
+    "src.presentation.http.controller.aggregation.aggregations_controller",
+])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(
-        f"Server is starting on port {config.port} "
-        f"in {config.environment}"
-    )
-
+    print(f"Server is starting on port {config.port} "
+          f"in {config.environment}")
     print(f"Documentation: http://localhost:{config.port}/docs")
-
     success = await mongodb.connect()
     if not success:
         raise RuntimeError("Failed to connect to database")
-
     yield
-
     await mongodb.disconnect()
     print("Server shutdown")
 
@@ -58,8 +66,18 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 register_global_exception_handlers(app)
 
+app.include_router(municipio_controller, prefix="/api/v1", tags=["municipios"])
 app.include_router(school_controller, prefix="/api/v1", tags=["schools"])
 app.include_router(aggregation_controller, prefix="/api/v1", tags=["aggregations"])
 app.include_router(stats_router, prefix="/api/v1", tags=["stats"])

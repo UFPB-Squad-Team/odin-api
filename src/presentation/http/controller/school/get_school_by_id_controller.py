@@ -13,8 +13,8 @@ class GetSchoolByIdController:
     def __init__(self, get_school_by_id_use_case: GetSchoolById):
         self.get_school_by_id_use_case = get_school_by_id_use_case
 
-    async def handle(self, school_id: str) -> School:
-        dto = GetSchoolByIdDTO(id=school_id)
+    async def handle(self, escola_id_inep: str) -> School:
+        dto = GetSchoolByIdDTO(escola_id_inep=escola_id_inep)
 
         result = await self.get_school_by_id_use_case.execute(dto=dto)
 
@@ -27,15 +27,15 @@ class GetSchoolByIdController:
 router = APIRouter()
 
 
-@router.get("/{school_id}", response_model=School)
+@router.get("/{escola_id_inep}", response_model=School)
 async def get_school_by_id(
-    school_id: str = Path(..., description="The unique identifier of the school"),
+    escola_id_inep: str = Path(..., description="Identificador INEP da escola"),
     get_school_by_id_use_case: GetSchoolById = Depends(
         get_school_by_id_use_case
     ),
 ):
     controller = GetSchoolByIdController(get_school_by_id_use_case)
 
-    result = await controller.handle(school_id=school_id)
+    result = await controller.handle(escola_id_inep=escola_id_inep)
 
     return result
