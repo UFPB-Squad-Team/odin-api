@@ -7,11 +7,9 @@ from .mongo_territorial_aggregation_repository import MongoTerritorialAggregatio
 
 class MongoBairroRepository(MongoTerritorialAggregationRepository, IBairroRepository):
     def __init__(self, bairro_collection: Any, setor_collection: Any):
-        # Reutilizamos a base que lida com agregações complexas
         super().__init__(None, bairro_collection, setor_collection)
 
     async def get_resumo(self, bairro_id: str) -> BairroResumo | None:
-        # 1. Tenta buscar documento oficial (com flexibilidade no nome do campo)
         query = {
             "$or": [
                 {"cd_bairro": bairro_id},
@@ -23,11 +21,10 @@ class MongoBairroRepository(MongoTerritorialAggregationRepository, IBairroReposi
         if doc:
             return self._map_to_resumo(doc, source="bairros_indicadores", oficial=True)
 
-        # 2. Fallback: Agregação por setores
         fallback_docs = await self.setor_collection.aggregate([
-            {"$match": query}, # Usamos a mesma query flexível aqui!
+            {"$match": query},
             {"$group": {
-                "_id": "$cd_bairro_ibge", # O _id do group pode ficar assim mesmo
+                "_id": "$cd_bairro_ibge",
                 "municipioIdIbge": {"$first": "$municipioIdIbge"},
                 "bairro": {"$first": "$bairro"},
                 "municipio": {"$first": "$municipio"},
@@ -47,7 +44,6 @@ class MongoBairroRepository(MongoTerritorialAggregationRepository, IBairroReposi
     def _map_to_resumo(self, doc: dict, source: str, oficial: bool) -> BairroResumo:
         mapped = MongoNeighborhoodMapper.from_doc(doc, source=source)
         
-        # Construção manual para garantir a separação correta sugerida pelo líder
         return BairroResumo(
             id=mapped["cd_bairro_ibge"],
             bairro=mapped["bairro"],
