@@ -30,12 +30,18 @@ from src.presentation.http.controller.bairro.index import (
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
-load_dotenv()
+from src.presentation.http.controller.school.stats.stats_controller import router as stats_router
 
+load_dotenv()
 school_container.wire(modules=[
     "src.presentation.http.controller.school.list_all_schools_controller",
     "src.presentation.http.controller.school.get_school_by_id_controller",
     "src.presentation.http.controller.school.geojson_controller",
+    "src.presentation.http.controller.school.stats.stats_controller" 
+])
+
+aggregation_container.wire(modules=[
+    "src.presentation.http.controller.aggregation.aggregations_controller",
 ])
 
 municipio_container.wire(modules=[
@@ -62,6 +68,7 @@ async def lifespan(app: FastAPI):
     await mongodb.disconnect()
     print("Server shutdown")
 
+
 app = FastAPI(
     title="Odin Backend API",
     description="Backend para gerenciamento de processos de dados escolares",
@@ -84,3 +91,4 @@ app.include_router(municipio_controller, prefix="/api/v1", tags=["municipios"])
 app.include_router(school_controller, prefix="/api/v1", tags=["schools"])
 app.include_router(bairro_controller, prefix="/api/v1", tags=["bairros"])
 app.include_router(aggregation_controller, prefix="/api/v1", tags=["aggregations"])
+app.include_router(stats_router, prefix="/api/v1", tags=["stats"])
