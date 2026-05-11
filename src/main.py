@@ -21,6 +21,12 @@ from src.infrastructure.database.config.connect_db import mongodb
 from src.presentation.http.middleware.global_exception_handler import (
     register_global_exception_handlers,
 )
+from src.presentation.http.controller.bairro.container import (
+    bairro_container, 
+)
+from src.presentation.http.controller.bairro.index import (
+    router as bairro_controller,
+)
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
@@ -40,6 +46,10 @@ aggregation_container.wire(modules=[
 
 municipio_container.wire(modules=[
     "src.presentation.http.controller.municipio.municipios_controller",
+])
+
+bairro_container.wire(modules=[
+    "src.presentation.http.controller.bairro.bairro_controller",
 ])
 
 aggregation_container.wire(modules=[
@@ -79,5 +89,6 @@ register_global_exception_handlers(app)
 
 app.include_router(municipio_controller, prefix="/api/v1", tags=["municipios"])
 app.include_router(school_controller, prefix="/api/v1", tags=["schools"])
+app.include_router(bairro_controller, prefix="/api/v1", tags=["bairros"])
 app.include_router(aggregation_controller, prefix="/api/v1", tags=["aggregations"])
 app.include_router(stats_router, prefix="/api/v1", tags=["stats"])
