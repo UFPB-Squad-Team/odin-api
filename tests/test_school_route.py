@@ -35,10 +35,10 @@ class FakeListAllSchoolsUseCase:
 
 class FakeGetSchoolByIdUseCase:
     async def execute(self, dto: GetSchoolByIdDTO):
-        if dto.id == "missing-id":
+        if dto.escola_id_inep == "missing-id":
             return None
         school = build_school()
-        school.id = dto.id
+        school.id = dto.escola_id_inep
         return school
 
 
@@ -59,6 +59,16 @@ class FakeGetParaibaGeoJsonUseCase:
                         "id": "25033158",
                         "escola_nome": "EMEIF MAE IAIA",
                         "escola_id_inep": 25033158,
+                        "estado_sigla": "PB",
+                        "inep": None,
+                        "inse": 5.8,
+                        "indicadores": {
+                            "inse": 5.8,
+                            "anoReferencia": 2025,
+                            "totalAlunos": 120,
+                        },
+                        "anoReferencia": 2025,
+                        "totalAlunos": 120,
                         "municipio_nome": "Agua Branca",
                         "municipioIdIbge": "2500106",
                         "bairro": "GUALTERINA ALENCAR VIDAL",
@@ -245,6 +255,12 @@ async def test_get_paraiba_geojson_route_returns_feature_collection(monkeypatch)
     assert payload["type"] == "FeatureCollection"
     assert payload["features"][0]["id"] == "25033158"
     assert payload["features"][0]["properties"]["id"] == "25033158"
+    assert payload["features"][0]["properties"]["estado_sigla"] == "PB"
+    assert payload["features"][0]["properties"]["inep"] is None
+    assert payload["features"][0]["properties"]["inse"] == 5.8
+    assert payload["features"][0]["properties"]["indicadores"]["totalAlunos"] == 120
+    assert payload["features"][0]["properties"]["anoReferencia"] == 2025
+    assert payload["features"][0]["properties"]["totalAlunos"] == 120
     assert payload["features"][0]["properties"]["municipioIdIbge"] == "2500106"
     assert fake_use_case.last_municipio_id is None
 

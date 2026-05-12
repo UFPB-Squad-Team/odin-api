@@ -187,10 +187,16 @@ async def test_get_paraiba_geojson_uses_escola_id_inep_as_feature_id():
             "escolaIdInep": 25033158,
             "municipioNome": "Agua Branca",
             "municipioIdIbge": "2500106",
+            "estadoSigla": "PB",
             "bairro": "Centro",
             "dependenciaAdm": "Municipal",
             "tipoLocalizacao": "Urbana",
-            "indicadores": {"ideb": 4.2},
+            "indicadores": {
+                "ideb": 4.2,
+                "inse": 5.8,
+                "anoReferencia": 2025,
+                "totalAlunos": 120,
+            },
             "localizacao": {"type": "Point", "coordinates": [-34.86, -7.12]},
         }
     ])
@@ -204,12 +210,49 @@ async def test_get_paraiba_geojson_uses_escola_id_inep_as_feature_id():
     assert "$or" not in query
     assert projection is not None
     assert projection["localizacao"] == 1
+    assert projection["estadoSigla"] == 1
+    assert projection["indicadores"] == 1
 
     feature = result["features"][0]
     assert feature["id"] == "25033158"
     assert feature["properties"]["id"] == "25033158"
     assert feature["properties"]["escola_id_inep"] == 25033158
+    assert feature["properties"]["estado_sigla"] == "PB"
+    assert feature["properties"]["inep"] is None
+    assert feature["properties"]["indicadores"]["inse"] == 5.8
+    assert feature["properties"]["indicadores"]["anoReferencia"] == 2025
+    assert feature["properties"]["indicadores"]["totalAlunos"] == 120
+    assert feature["properties"]["inse"] == 5.8
+    assert feature["properties"]["anoReferencia"] == 2025
+    assert feature["properties"]["totalAlunos"] == 120
     assert feature["properties"]["municipioIdIbge"] == "2500106"
+
+
+@pytest.mark.asyncio
+async def test_get_paraiba_geojson_uses_required_property_defaults():
+    collection = FakeCollection([
+        {
+            "_id": "mongo-id-1",
+            "escolaNome": "Escola A",
+            "escolaIdInep": 25033158,
+            "municipioNome": "Agua Branca",
+            "municipioIdIbge": "2500106",
+            "dependenciaAdm": "Municipal",
+            "tipoLocalizacao": "Urbana",
+            "localizacao": {"type": "Point", "coordinates": [-34.86, -7.12]},
+        }
+    ])
+    repository = MongoSchoolRepository(collection=collection)
+
+    result = await repository.get_paraiba_geojson()
+
+    properties = result["features"][0]["properties"]
+    assert properties["estado_sigla"] == "PB"
+    assert properties["inep"] is None
+    assert properties["inse"] is None
+    assert properties["indicadores"] == {"anoReferencia": 2025, "totalAlunos": 0}
+    assert properties["anoReferencia"] == 2025
+    assert properties["totalAlunos"] == 0
 
 
 @pytest.mark.asyncio
