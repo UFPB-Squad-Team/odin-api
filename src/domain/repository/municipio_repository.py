@@ -8,6 +8,7 @@ class IMunicipioRepository(ABC):
     async def list_municipios(
         self,
         sg_uf: str | None = None,
+        term: str | None = None, 
     ) -> list[MunicipioCatalogItem]:
         ...
 

@@ -9,4 +9,7 @@ class ListMunicipios:
         self.municipio_repository = municipio_repository
 
     async def execute(self, dto: ListMunicipiosDTO) -> list[MunicipioCatalogItem]:
-        return await self.municipio_repository.list_municipios(sg_uf=dto.sg_uf)
+        return await self.municipio_repository.list_municipios(
+            sg_uf=dto.sg_uf,
+            term=dto.term)  
+    

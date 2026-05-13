@@ -34,9 +34,16 @@ async def list_municipios(
         max_length=2,
         description="Filtro opcional por UF, por exemplo PB.",
     ),
+    term: str | None = Query(
+        default=None,
+        description="Termo opcional para busca aproximada (fuzzy) pelo nome.",
+    ),
     use_case: ListMunicipios = Depends(get_list_municipios_use_case),
 ):
-    dto = ListMunicipiosDTO(sg_uf=sg_uf.upper() if sg_uf else None)
+    dto = ListMunicipiosDTO(
+        sg_uf=sg_uf.upper() if sg_uf else None, 
+        term=term
+    )
     return await use_case.execute(dto)
 
 
