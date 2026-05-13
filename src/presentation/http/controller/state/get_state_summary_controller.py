@@ -10,10 +10,23 @@ router = APIRouter()
 @router.get("/estados/{sg_uf}/resumo", response_model=StateSummary)
 @inject
 async def get_state_summary(
-    sg_uf: str = Path(..., description="Sigla da Unidade Federativa (ex: PB)"),
+    # Adicionamos validação de tamanho (min/max 2) e um exemplo para a documentação do Swagger
+    sg_uf: str = Path(
+        ..., 
+        min_length=2, 
+        max_length=2, 
+        description="Sigla da Unidade Federativa (ex: PB)",
+        example="PB"
+    ),
     use_case: GetStateSummaryUseCase = Depends(Provide[Container.get_state_summary_use_case])
 ):
-    result = await use_case.execute(sg_uf)
+    # Agora o sg_uf já chega aqui validado pelo FastAPI
+    result = await use_case.execute(sg_uf.upper())
+    
     if not result:
-        raise HTTPException(status_code=404, detail=f"Dados não encontrados para o estado: {sg_uf}")
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Dados não encontrados para o estado: {sg_uf.upper()}"
+        )
+        
     return result
