@@ -10,7 +10,7 @@ router = APIRouter()
 @router.get("/estados/{sg_uf}/resumo", response_model=StateSummary)
 @inject
 async def get_state_summary(
-    # Adicionamos validação de tamanho (min/max 2) e um exemplo para a documentação do Swagger
+    
     sg_uf: str = Path(
         ..., 
         min_length=2, 
@@ -20,7 +20,6 @@ async def get_state_summary(
     ),
     use_case: GetStateSummaryUseCase = Depends(Provide[Container.get_state_summary_use_case])
 ):
-    # Agora o sg_uf já chega aqui validado pelo FastAPI
     result = await use_case.execute(sg_uf.upper())
     
     if not result:

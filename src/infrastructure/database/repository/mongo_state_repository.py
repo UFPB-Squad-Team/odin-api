@@ -12,10 +12,10 @@ class MongoStateRepository(IStateRepository):
         Busca os dados no MongoDB e realiza a tradução imediata para a 
         estrutura de domínio usando o Mapper.
         """
-        # Query otimizada conforme a sugestão 5
+
         query = {"sg_uf": sg_uf.upper()}
         
-        # Projection para buscar apenas o necessário
+
         projection = {
             "_id": 0, 
             "educacao": 1, 
@@ -25,6 +25,4 @@ class MongoStateRepository(IStateRepository):
         cursor = self.municipio_collection.find(query, projection)
         raw_documents = await cursor.to_list(length=None)
         
-        # Aqui acontece a 'mágica' da tradução que o seu colega sugeriu:
-        # Transformamos a lista de dicts em uma lista de objetos CityAggregation
         return [StateSummaryMapper.to_entity(doc) for doc in raw_documents]
