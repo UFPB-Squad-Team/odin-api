@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class GeoJsonPointGeometry(BaseModel):
@@ -12,6 +12,12 @@ class ParaibaSchoolProperties(BaseModel):
     id: str | None = None
     escola_nome: str | None = None
     escola_id_inep: int | None = None
+    estado_sigla: str = "PB"
+    inep: int | str | None = None
+    inse: float | int | str | None = None
+    indicadores: dict[str, Any] = Field(default_factory=dict)
+    anoReferencia: int = 2025
+    totalAlunos: int = 0
     municipio_nome: str | None = None
     municipioIdIbge: str | None = None
     bairro: str | None = None

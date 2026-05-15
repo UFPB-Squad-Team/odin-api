@@ -31,6 +31,9 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 from src.presentation.http.controller.school.stats.stats_controller import router as stats_router
+from src.presentation.http.controller.state.container import container as state_container
+from src.presentation.http.controller.state.index import router as state_controller
+
 
 load_dotenv()
 school_container.wire(modules=[
@@ -54,6 +57,10 @@ bairro_container.wire(modules=[
 
 aggregation_container.wire(modules=[
     "src.presentation.http.controller.aggregation.aggregations_controller",
+])
+
+state_container.wire(modules=[
+    "src.presentation.http.controller.state.get_state_summary_controller",
 ])
 
 @asynccontextmanager
@@ -92,3 +99,4 @@ app.include_router(school_controller, prefix="/api/v1", tags=["schools"])
 app.include_router(bairro_controller, prefix="/api/v1", tags=["bairros"])
 app.include_router(aggregation_controller, prefix="/api/v1", tags=["aggregations"])
 app.include_router(stats_router, prefix="/api/v1", tags=["stats"])
+app.include_router(state_controller, prefix="/api/v1", tags=["estados"])

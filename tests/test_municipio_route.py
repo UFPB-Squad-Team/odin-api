@@ -1,7 +1,11 @@
 import httpx
 import pytest
 
-from src.domain.entities.municipio import MunicipioCatalogItem, MunicipioResumo
+from src.domain.entities.municipio import (
+    EducacaoStats,
+    MunicipioCatalogItem,
+    MunicipioResumo,
+)
 from src.main import app
 from src.presentation.http.controller.aggregation.callable.aggregation_callable import (
     get_city_aggregations_use_case,
@@ -41,14 +45,16 @@ class FakeGetMunicipioResumoUseCase:
                 municipioIdIbge="2507507",
                 municipio="João Pessoa",
                 sg_uf="PB",
-                total_escolas=412,
-                total_matriculas=98000,
                 total_bairros=64,
-                pct_com_biblioteca=62.3,
-                pct_com_internet=88.1,
-                pct_com_lab_informatica=45.2,
-                pct_sem_acessibilidade=31.0,
-                mediaIdebAnosIniciais=5.12,
+                educacao=EducacaoStats(
+                    totalEscolas=412,
+                    totalMatriculas=98000,
+                    pctComBiblioteca=62.3,
+                    pctComInternet=88.1,
+                    pctComLabInformatica=45.2,
+                    pctSemAcessibilidade=31.0,
+                    mediaIdebAnosIniciais=5.12,
+                ),
                 tem_bairros_oficiais=True,
                 source="municipio_indicadores",
             )

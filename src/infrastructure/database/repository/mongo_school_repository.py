@@ -250,10 +250,13 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             "municipio_id_ibge": 1,
             "co_municipio": 1,
             "idIbge": 1,
+            "estadoSigla": 1,
+            "inep": 1,
+            "inse": 1,
             "endereco.bairro": 1,
             "dependenciaAdm": 1,
             "tipoLocalizacao": 1,
-            "indicadores.ideb": 1,
+            "indicadores": 1,
             "localizacao": 1,
         }
 
@@ -267,6 +270,14 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
 
             feature_id = str(escola_id_inep)
             municipio_id_ibge = self._resolve_municipio_id_ibge(doc)
+            indicadores = dict(doc.get("indicadores") or {})
+            ano_referencia = indicadores.get("anoReferencia", 2025)
+            total_alunos = indicadores.get("totalAlunos", 0)
+            inse = indicadores.get("inse", doc.get("inse"))
+            indicadores["anoReferencia"] = ano_referencia
+            indicadores["totalAlunos"] = total_alunos
+            if inse is not None:
+                indicadores["inse"] = inse
 
             features.append(
                 {
@@ -277,6 +288,12 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
                         "id": feature_id,
                         "escola_nome": doc.get("escolaNome"),
                         "escola_id_inep": escola_id_inep,
+                        "estado_sigla": doc.get("estadoSigla") or "PB",
+                        "inep": doc.get("inep"),
+                        "inse": inse,
+                        "indicadores": indicadores,
+                        "anoReferencia": ano_referencia,
+                        "totalAlunos": total_alunos,
                         "municipio_nome": doc.get("municipioNome"),
                         "municipioIdIbge": (
                             str(municipio_id_ibge)
