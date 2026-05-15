@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
 class MunicipioCatalogItem(BaseModel):
@@ -112,38 +112,47 @@ class MunicipioResumo(BaseModel):
         description="Data source used to build this summary",
     )
 
+    @computed_field
     @property
     def total_escolas(self) -> int:
         return int(self.educacao.totalEscolas or 0)
 
+    @computed_field
     @property
     def total_matriculas(self) -> int:
         return int(self.educacao.totalMatriculas or 0)
 
+    @computed_field
     @property
     def total_alunos(self) -> int:
         return int(self.educacao.totalMatriculas or 0)
 
+    @computed_field
     @property
     def pct_com_biblioteca(self) -> float | None:
         return self.educacao.pctComBiblioteca
 
+    @computed_field
     @property
     def pct_com_internet(self) -> float | None:
         return self.educacao.pctComInternet
 
+    @computed_field
     @property
     def pct_com_lab_informatica(self) -> float | None:
         return self.educacao.pctComLabInformatica
 
+    @computed_field
     @property
     def pct_sem_acessibilidade(self) -> float | None:
         return self.educacao.pctSemAcessibilidade
 
+    @computed_field
     @property
     def mediaIdebAnosIniciais(self) -> float | None:
         return self.educacao.mediaIdebAnosIniciais
 
+    @computed_field
     @property
     def mediaIdebAnosFinals(self) -> float | None:
         return self.educacao.mediaIdebAnosFinals
