@@ -18,6 +18,7 @@ class ParaibaSchoolProperties(BaseModel):
     indicadores: dict[str, Any] = Field(default_factory=dict)
     anoReferencia: int = 2025
     totalAlunos: int = 0
+    matriculas: dict[str, Any] | None = None
     municipio_nome: str | None = None
     municipioIdIbge: str | None = None
     bairro: str | None = None

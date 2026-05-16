@@ -151,6 +151,7 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
             "socioeconomico.fonte": 1,
             "socioeconomico.populacao": 1,
             "socioeconomico.estruturaEtaria": 1,
+            "socioeconomico.genero": 1,
             "socioeconomico.raca": 1,
             "socioeconomico.saneamento": 1,
             "socioeconomico.educacaoPopulacao": 1,

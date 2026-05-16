@@ -16,22 +16,37 @@ class AggregationGeometry(BaseModel):
 class SocioeconomicoPopulacao(BaseModel):
     total: int | None = None
     totalDomiciliosParticulares: int | None = None
+    totalDomicilios: int | None = None
     mediaMoradoresPorDomicilio: float | int | None = None
 
 
 class SocioeconomicoEstruturaEtaria(BaseModel):
     pctCriancas0a9: float | int | None = None
     pctIdosos60Mais: float | int | None = None
+    pctJovens15a29: float | int | None = None
+    pctAdultos30a59: float | int | None = None
 
 
 class SocioeconomicoRaca(BaseModel):
     pctPretaParda: float | int | None = None
+    pctBranca: float | int | None = None
+    pctIndigena: float | int | None = None
+
+
+class SocioeconomicoGenero(BaseModel):
+    pctPopMasculina: float | int | None = None
+    pctPopFeminina: float | int | None = None
 
 
 class SocioeconomicoSaneamento(BaseModel):
     pctAguaRedeGeral: float | int | None = None
+    pctAguaInadequada: float | int | None = None
+    pctAguaNaoEncanada: float | int | None = None
     pctEsgotoRedeGeral: float | int | None = None
+    pctEsgotoInadequado: float | int | None = None
     pctLixoColetado: float | int | None = None
+    pctLixoInadequado: float | int | None = None
+    pctDomSemBanheiro: float | int | None = None
 
 
 class SocioeconomicoEducacaoPopulacao(BaseModel):
@@ -48,6 +63,10 @@ class SocioeconomicoMortalidade(BaseModel):
 class SocioeconomicoHabitacao(BaseModel):
     pctDomImprovisado: float | int | None = None
     pctDomSuperlotado: float | int | None = None
+    pctDomUnipessoal: float | int | None = None
+    pctDomTipoCasa: float | int | None = None
+    pctDomTipoApto: float | int | None = None
+    pctDomDegradado: float | int | None = None
 
 
 class Socioeconomico(BaseModel):
@@ -55,6 +74,7 @@ class Socioeconomico(BaseModel):
     fonte: str | None = None
     populacao: SocioeconomicoPopulacao | None = None
     estruturaEtaria: SocioeconomicoEstruturaEtaria | None = None
+    genero: SocioeconomicoGenero | None = None
     raca: SocioeconomicoRaca | None = None
     saneamento: SocioeconomicoSaneamento | None = None
     educacaoPopulacao: SocioeconomicoEducacaoPopulacao | None = None

@@ -197,6 +197,15 @@ async def test_get_paraiba_geojson_uses_escola_id_inep_as_feature_id():
                 "anoReferencia": 2025,
                 "totalAlunos": 120,
             },
+            "matriculas": {
+                "totalAlunos": 423,
+                "educacaoInfantil": 0,
+                "fundamentalTotal": 403,
+                "fundamentalAnosIniciais": 403,
+                "fundamentalAnosFinais": 0,
+                "ensinoMedio": 0,
+                "eja": 20,
+            },
             "localizacao": {"type": "Point", "coordinates": [-34.86, -7.12]},
         }
     ])
@@ -212,6 +221,7 @@ async def test_get_paraiba_geojson_uses_escola_id_inep_as_feature_id():
     assert projection["localizacao"] == 1
     assert projection["estadoSigla"] == 1
     assert projection["indicadores"] == 1
+    assert projection["matriculas"] == 1
 
     feature = result["features"][0]
     assert feature["id"] == "25033158"
@@ -226,6 +236,9 @@ async def test_get_paraiba_geojson_uses_escola_id_inep_as_feature_id():
     assert feature["properties"]["anoReferencia"] == 2025
     assert feature["properties"]["totalAlunos"] == 120
     assert feature["properties"]["municipioIdIbge"] == "2500106"
+    assert feature["properties"]["matriculas"]["totalAlunos"] == 423
+    assert feature["properties"]["matriculas"]["fundamentalTotal"] == 403
+    assert feature["properties"]["matriculas"]["eja"] == 20
 
 
 @pytest.mark.asyncio
@@ -253,6 +266,7 @@ async def test_get_paraiba_geojson_uses_required_property_defaults():
     assert properties["indicadores"] == {"anoReferencia": 2025, "totalAlunos": 0}
     assert properties["anoReferencia"] == 2025
     assert properties["totalAlunos"] == 0
+    assert properties["matriculas"] is None
 
 
 @pytest.mark.asyncio

@@ -24,6 +24,9 @@ def test_school_builds_with_defaults():
 
     assert school.id
     assert school.indicadores.totalAlunos == 0
+    assert school.matriculas.totalAlunos == 0
+    assert school.matriculas.educacaoInfantil is None
+    assert school.matriculas.eja is None
     assert school.endereco.bairro == ""
     assert school.infraestrutura.internet.possuiInternet is False
 

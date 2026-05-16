@@ -131,18 +131,28 @@ async def test_get_resumo_uses_primary_document_and_counts_bairros():
                     "estruturaEtaria": {
                         "pctCriancas0a9": 12.4,
                         "pctIdosos60Mais": 15.1,
+                        "pctJovens15a29": 22.5,
+                        "pctAdultos30a59": 41.2,
                         "razaoDependencia": 63.0,
+                    },
+                    "genero": {
+                        "pctPopMasculina": 47.8,
+                        "pctPopFeminina": 52.2,
                     },
                     "raca": {
                         "pctPretaParda": 66.2,
+                        "pctBranca": 38.5,
+                        "pctIndigena": 0.3,
                     },
                     "saneamento": {
                         "pctAguaRedeGeral": 91.8,
                         "pctAguaInadequada": 8.2,
+                        "pctAguaNaoEncanada": 5.1,
                         "pctEsgotoRedeGeral": 74.6,
                         "pctEsgotoInadequado": 25.4,
                         "pctLixoColetado": 98.1,
                         "pctLixoInadequado": 1.9,
+                        "pctDomSemBanheiro": 0.8,
                     },
                     "educacaoPopulacao": {
                         "taxaAnalfabetismo15Mais": 8.1,
@@ -157,6 +167,10 @@ async def test_get_resumo_uses_primary_document_and_counts_bairros():
                     "habitacao": {
                         "pctDomImprovisado": 1.2,
                         "pctDomSuperlotado": 3.4,
+                        "pctDomUnipessoal": 18.5,
+                        "pctDomTipoCasa": 92.3,
+                        "pctDomTipoApto": 6.8,
+                        "pctDomDegradado": 0.2,
                     },
                 },
             }
@@ -196,6 +210,18 @@ async def test_get_resumo_uses_primary_document_and_counts_bairros():
     assert resumo.socioeconomico.saneamento.pctAguaInadequada == 8.2
     assert resumo.socioeconomico.saneamento.pctEsgotoInadequado == 25.4
     assert resumo.socioeconomico.saneamento.pctLixoInadequado == 1.9
+    assert resumo.socioeconomico.saneamento.pctAguaNaoEncanada == 5.1
+    assert resumo.socioeconomico.saneamento.pctDomSemBanheiro == 0.8
+    assert resumo.socioeconomico.estruturaEtaria.pctJovens15a29 == 22.5
+    assert resumo.socioeconomico.estruturaEtaria.pctAdultos30a59 == 41.2
+    assert resumo.socioeconomico.genero.pctPopMasculina == 47.8
+    assert resumo.socioeconomico.genero.pctPopFeminina == 52.2
+    assert resumo.socioeconomico.raca.pctBranca == 38.5
+    assert resumo.socioeconomico.raca.pctIndigena == 0.3
+    assert resumo.socioeconomico.habitacao.pctDomUnipessoal == 18.5
+    assert resumo.socioeconomico.habitacao.pctDomTipoCasa == 92.3
+    assert resumo.socioeconomico.habitacao.pctDomTipoApto == 6.8
+    assert resumo.socioeconomico.habitacao.pctDomDegradado == 0.2
     assert resumo.socioeconomico.educacaoPopulacao.taxaAnalfabetismo15Mais == 8.1
     assert municipio_collection.last_find_one_projection is not None
     assert "educacao.mediaIdebAnosFinals" in municipio_collection.last_find_one_projection

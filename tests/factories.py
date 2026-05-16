@@ -4,7 +4,7 @@ from src.domain.enums.enum_dependencia_administrativa import (
 )
 from src.domain.enums.enum_tipo_localizacao import TipoLocalizacao
 from src.domain.enums.enum_uf import UF
-from src.domain.value_objects.indicators import Indicadores
+from src.domain.value_objects.indicators import Indicadores, Matriculas
 from src.domain.value_objects.location import Location
 
 
@@ -21,6 +21,17 @@ def build_school() -> School:
         localizacao=Location(type="Point", coordinates=(-34.86, -7.12)),
         endereco={"bairro": "Centro"},
         indicadores=Indicadores(totalAlunos=120),
+        matriculas=Matriculas(
+            totalAlunos=270,
+            educacaoInfantil=45,
+            educacaoInfantilCreche=15,
+            educacaoInfantilPreEscola=30,
+            fundamentalTotal=120,
+            fundamentalAnosIniciais=70,
+            fundamentalAnosFinais=50,
+            ensinoMedio=80,
+            eja=25,
+        ),
         infraestrutura={
             "possuiAguaPotavel": True,
             "equipamentos": {"desktopAluno": True},
@@ -43,6 +54,17 @@ def build_school_document(document_id: str = "school-1"):
         "localizacao": {"type": "Point", "coordinates": [-34.86, -7.12]},
         "endereco": {"bairro": "Centro", "municipio": "Joao Pessoa", "uf": "PB"},
         "indicadores": {"totalAlunos": 120},
+        "matriculas": {
+            "totalAlunos": 270,
+            "educacaoInfantil": 45,
+            "educacaoInfantilCreche": 15,
+            "educacaoInfantilPreEscola": 30,
+            "fundamentalTotal": 120,
+            "fundamentalAnosIniciais": 70,
+            "fundamentalAnosFinais": 50,
+            "ensinoMedio": 80,
+            "eja": 25,
+        },
         "infraestrutura": {
             "possuiAguaPotavel": True,
             "equipamentos": {"desktopAluno": True},

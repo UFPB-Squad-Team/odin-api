@@ -7,7 +7,7 @@ from ..validators.school_validation import (
     SchoolValidator,
 )
 from src.domain.value_objects.location import Location
-from src.domain.value_objects.indicators import Indicadores
+from src.domain.value_objects.indicators import Indicadores, Matriculas
 from src.domain.value_objects.infraestrutura import Infraestrutura
 from src.domain.value_objects.endereco import Endereco
 
@@ -29,6 +29,7 @@ class School(BaseModel):
     localizacao: Location
     endereco: Endereco = Field(default_factory=Endereco)
     indicadores: Indicadores = Field(default_factory=Indicadores)
+    matriculas: Matriculas = Field(default_factory=Matriculas)
     infraestrutura: Infraestrutura = Field(default_factory=Infraestrutura)
 
     @model_validator(mode="after")
