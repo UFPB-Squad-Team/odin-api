@@ -1,3 +1,4 @@
+import re
 import unicodedata
 from typing import Any
 
@@ -25,22 +26,67 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
     ):
         super().__init__(municipio_collection, bairro_collection, setor_collection)
 
+    def _build_accent_insensitive_regex(self, term: str) -> str:
+        """Limpa o termo e constrói um regex que ignora acentuação."""
+        term = term.strip()
+        
+        term_sem_acento = "".join(
+            c for c in unicodedata.normalize("NFD", term)
+            if unicodedata.category(c) != "Mn"
+        )
+        
+        replacements = {
+            'a': '[aáàãâä]',
+            'e': '[eéèêë]',
+            'i': '[iíìîï]',
+            'o': '[oóòõôö]',
+            'u': '[uúùûü]',
+            'c': '[cç]'
+        }
+        
+        pattern = ""
+        for char in term_sem_acento:
+            char_lower = char.lower()
+            if char_lower in replacements:
+                pattern += replacements[char_lower]
+            else:
+                pattern += re.escape(char)
+                
+        return pattern
+
     async def list_municipios(
         self,
         sg_uf: str | None = None,
+        term: str | None = None,
     ) -> list[MunicipioCatalogItem]:
         normalized_uf = sg_uf.upper() if sg_uf else None
 
         query: dict[str, Any] = {}
+        and_conditions = []
+
         if normalized_uf:
-            query = {
+            and_conditions.append({
                 "$or": [
                     {"sg_uf": normalized_uf},
                     {"uf": normalized_uf},
                     {"estado_sigla": normalized_uf},
                     {"estadoSigla": normalized_uf},
                 ]
-            }
+            })
+
+        if term and term.strip():
+            regex_pattern = self._build_accent_insensitive_regex(term)
+            and_conditions.append({
+                "$or": [
+                    {"nm_municipio": {"$regex": regex_pattern, "$options": "i"}},
+                    {"municipio": {"$regex": regex_pattern, "$options": "i"}},
+                    {"municipio_nome": {"$regex": regex_pattern, "$options": "i"}},
+                    {"municipioNome": {"$regex": regex_pattern, "$options": "i"}},
+                ]
+            })
+
+        if and_conditions:
+            query["$and"] = and_conditions
 
         projection = {
             "co_municipio": 1,
