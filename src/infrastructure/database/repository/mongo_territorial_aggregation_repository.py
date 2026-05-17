@@ -401,7 +401,9 @@ class MongoTerritorialAggregationRepository(
             "qtd_alunos": 1,
             "pct_com_biblioteca": 1,
             "pct_com_internet": 1,
+            "pct_com_internet_alunos": 1,
             "pct_com_lab_informatica": 1,
+            "pct_com_lab_ciencias": 1,
             "pct_sem_acessibilidade": 1,
             "tem_bairro_official": 1,
             "tem_bairro_oficial": 1,
@@ -460,7 +462,9 @@ class MongoTerritorialAggregationRepository(
                     "avg_ideb": {"$ifNull": ["$avg_ideb", "$ideb"]},
                     "pct_com_biblioteca": "$pct_com_biblioteca",
                     "pct_com_internet": "$pct_com_internet",
+                    "pct_com_internet_alunos": "$pct_com_internet_alunos",
                     "pct_com_lab_informatica": "$pct_com_lab_informatica",
+                    "pct_com_lab_ciencias": "$pct_com_lab_ciencias",
                     "pct_sem_acessibilidade": "$pct_sem_acessibilidade",
                     "socioeconomico": "$socioeconomico",
                     "educacao": "$educacao",
@@ -509,7 +513,9 @@ class MongoTerritorialAggregationRepository(
                     "avg_ideb": {"$avg": "$avg_ideb"},
                     "pct_com_biblioteca": {"$avg": "$pct_com_biblioteca"},
                     "pct_com_internet": {"$avg": "$pct_com_internet"},
+                    "pct_com_internet_alunos": {"$avg": "$pct_com_internet_alunos"},
                     "pct_com_lab_informatica": {"$avg": "$pct_com_lab_informatica"},
+                    "pct_com_lab_ciencias": {"$avg": "$pct_com_lab_ciencias"},
                     "pct_sem_acessibilidade": {"$avg": "$pct_sem_acessibilidade"},
                     "avg_lon": {"$avg": "$lon"},
                     "avg_lat": {"$avg": "$lat"},
@@ -526,7 +532,9 @@ class MongoTerritorialAggregationRepository(
                     "avg_ideb": 1,
                     "pct_com_biblioteca": 1,
                     "pct_com_internet": 1,
+                    "pct_com_internet_alunos": 1,
                     "pct_com_lab_informatica": 1,
+                    "pct_com_lab_ciencias": 1,
                     "pct_sem_acessibilidade": 1,
                     "avg_lon": 1,
                     "avg_lat": 1,
@@ -628,8 +636,14 @@ class MongoTerritorialAggregationRepository(
                     "pct_com_internet": {
                         "$ifNull": ["$pct_com_internet", {"$ifNull": ["$educacao.pctComInternet", "$educacao.pct_com_internet"]}]
                     },
+                    "pct_com_internet_alunos": {
+                        "$ifNull": ["$pct_com_internet_alunos", {"$ifNull": ["$educacao.pctComInternetAlunos", "$educacao.pct_com_internet_alunos"]}]
+                    },
                     "pct_com_lab_informatica": {
-                        "$ifNull": ["$pct_com_lab_informatica", {"$ifNull": ["$educacao.pctComLabInformatica", "$educacao.pct_com_lab_informatica"]}]
+                        "$ifNull": ["$pct_com_lab_informatica", {"$ifNull": ["$educacao.pctComLaboratorioInformatica", {"$ifNull": ["$educacao.pctComLabInformatica", "$educacao.pct_com_lab_informatica"]}]}]
+                    },
+                    "pct_com_lab_ciencias": {
+                        "$ifNull": ["$pct_com_lab_ciencias", {"$ifNull": ["$educacao.pctComLaboratorioCiencias", "$educacao.pct_com_lab_ciencias"]}]
                     },
                     "pct_sem_acessibilidade": {
                         "$ifNull": ["$pct_sem_acessibilidade", {"$ifNull": ["$educacao.pctSemAcessibilidade", "$educacao.pct_sem_acessibilidade"]}]
@@ -749,7 +763,9 @@ class MongoTerritorialAggregationRepository(
                         "avg_ideb": {"$avg": "$avg_ideb"},
                         "pct_com_biblioteca": {"$avg": "$pct_com_biblioteca"},
                         "pct_com_internet": {"$avg": "$pct_com_internet"},
+                        "pct_com_internet_alunos": {"$avg": "$pct_com_internet_alunos"},
                         "pct_com_lab_informatica": {"$avg": "$pct_com_lab_informatica"},
+                        "pct_com_lab_ciencias": {"$avg": "$pct_com_lab_ciencias"},
                         "pct_sem_acessibilidade": {"$avg": "$pct_sem_acessibilidade"},
                         "geometria": {"$first": "$geometria"},
                         "socioeconomico": {"$first": "$socioeconomico"},
@@ -772,7 +788,9 @@ class MongoTerritorialAggregationRepository(
                         "avg_ideb": 1,
                         "pct_com_biblioteca": 1,
                         "pct_com_internet": 1,
+                        "pct_com_internet_alunos": 1,
                         "pct_com_lab_informatica": 1,
+                        "pct_com_lab_ciencias": 1,
                         "pct_sem_acessibilidade": 1,
                         "geometria": 1,
                         "socioeconomico": 1,

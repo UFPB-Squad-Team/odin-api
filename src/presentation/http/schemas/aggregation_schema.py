@@ -87,10 +87,52 @@ class EducacaoMunicipio(BaseModel):
     totalEscolas: int | None = None
     totalMatriculas: int | None = None
     totalBairros: int | None = None
+    # Infraestrutura
+    pctComAguaPotavel: float | int | None = None
+    pctComEnergiaPublica: float | int | None = None
+    pctComEsgotoRedePublica: float | int | None = None
+    pctComColetaLixo: float | int | None = None
     pctComInternet: float | int | None = None
+    pctComInternetAlunos: float | int | None = None
     pctComBiblioteca: float | int | None = None
-    pctComLabInformatica: float | int | None = None
+    pctComLaboratorioInformatica: float | int | None = None
+    pctComLaboratorioCiencias: float | int | None = None
+    pctComQuadraEsportes: float | int | None = None
+    pctComCozinha: float | int | None = None
+    pctComRefeitorio: float | int | None = None
     pctSemAcessibilidade: float | int | None = None
+    # IDEB
+    mediaIdebAnosIniciais: float | None = None
+    mediaIdebAnosFinals: float | None = None
+    mediaIdebEnsinoMedio: float | None = None
+    # AFD
+    mediaAfdAnosIniciais: float | None = None
+    mediaAfdAnosFinais: float | None = None
+    mediaAfdEnsinoMedio: float | None = None
+    # TDI
+    mediaTdiAnosIniciais: float | None = None
+    mediaTdiAnosFinais: float | None = None
+    mediaTdiEnsinoMedio: float | None = None
+    # Taxas de Aprovação
+    mediaTaxaAprovacaoAi: float | None = None
+    mediaTaxaAprovacaoAf: float | None = None
+    mediaTaxaAprovacaoEm: float | None = None
+    # Taxas de Abandono
+    mediaTaxaAbandonoAi: float | None = None
+    mediaTaxaAbandonoAf: float | None = None
+    mediaTaxaAbandonoEm: float | None = None
+    # Docentes com Ensino Superior
+    mediaDocentesSuperiorAi: float | None = None
+    mediaDocentesSuperiorAf: float | None = None
+    mediaDocentesSuperiorEm: float | None = None
+    # Horas Aula Diárias
+    mediaHorasAulaAi: float | None = None
+    mediaHorasAulaAf: float | None = None
+    mediaHorasAulaEm: float | None = None
+    # Alunos por Turma
+    mediaAlunosTurmaAi: float | None = None
+    mediaAlunosTurmaAf: float | None = None
+    mediaAlunosTurmaEm: float | None = None
 
 
 class CityAggregationProperties(BaseModel):
@@ -103,7 +145,9 @@ class CityAggregationProperties(BaseModel):
     avg_ideb: float | int | None = None
     pct_com_biblioteca: float | int | None = None
     pct_com_internet: float | int | None = None
+    pct_com_internet_alunos: float | int | None = None
     pct_com_lab_informatica: float | int | None = None
+    pct_com_lab_ciencias: float | int | None = None
     pct_sem_acessibilidade: float | int | None = None
     socioeconomico: Socioeconomico | None = None
     educacao: EducacaoMunicipio | None = None
@@ -146,7 +190,9 @@ class MongoNeighborhoodAggregation(BaseModel):
     )
     pct_com_biblioteca: float | int | None = None
     pct_com_internet: float | int | None = None
+    pct_com_internet_alunos: float | int | None = None
     pct_com_lab_informatica: float | int | None = None
+    pct_com_lab_ciencias: float | int | None = None
     pct_sem_acessibilidade: float | int | None = None
     sg_uf: str | None = None
     total_escolas: int
@@ -174,7 +220,9 @@ class NeighborhoodAggregationProperties(BaseModel):
     avg_ideb: float | int | None = None
     pct_com_biblioteca: float | int | None = None
     pct_com_internet: float | int | None = None
+    pct_com_internet_alunos: float | int | None = None
     pct_com_lab_informatica: float | int | None = None
+    pct_com_lab_ciencias: float | int | None = None
     pct_sem_acessibilidade: float | int | None = None
     tem_bairro_oficial: bool = Field(serialization_alias="tem_bairro_oficial")
     nivel: Literal["bairro", "setor"] = "bairro"
