@@ -137,12 +137,29 @@ class MongoNeighborhoodMapper:
                 default=cls._pick(doc, "pct_com_internet"),
             )
         )
+        pct_com_internet_alunos = cls._round_percentage(
+            cls._pick_nested(
+                doc,
+                ("educacao", "pctComInternetAlunos"),
+                ("educacao", "pct_com_internet_alunos"),
+                default=cls._pick(doc, "pct_com_internet_alunos"),
+            )
+        )
         pct_com_lab_informatica = cls._round_percentage(
             cls._pick_nested(
                 doc,
+                ("educacao", "pctComLaboratorioInformatica"),
                 ("educacao", "pctComLabInformatica"),
                 ("educacao", "pct_com_lab_informatica"),
                 default=cls._pick(doc, "pct_com_lab_informatica"),
+            )
+        )
+        pct_com_lab_ciencias = cls._round_percentage(
+            cls._pick_nested(
+                doc,
+                ("educacao", "pctComLaboratorioCiencias"),
+                ("educacao", "pct_com_lab_ciencias"),
+                default=cls._pick(doc, "pct_com_lab_ciencias"),
             )
         )
         pct_sem_acessibilidade = cls._round_percentage(
@@ -163,7 +180,9 @@ class MongoNeighborhoodMapper:
             "municipioIdIbge": str(municipio_id_ibge),
             "pct_com_biblioteca": pct_com_biblioteca,
             "pct_com_internet": pct_com_internet,
+            "pct_com_internet_alunos": pct_com_internet_alunos,
             "pct_com_lab_informatica": pct_com_lab_informatica,
+            "pct_com_lab_ciencias": pct_com_lab_ciencias,
             "pct_sem_acessibilidade": pct_sem_acessibilidade,
             "sg_uf": cls._pick(doc, "sg_uf", "uf"),
             "total_escolas": total_escolas,

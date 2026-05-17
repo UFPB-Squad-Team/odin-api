@@ -9,10 +9,41 @@ class EducacaoStateStats(BaseModel):
     total_alunos: int = 0
     pct_com_biblioteca: float | None = None
     pct_com_internet: float | None = None
+    pct_com_internet_alunos: float | None = None
     pct_com_lab_informatica: float | None = None
+    pct_com_lab_ciencias: float | None = None
     pct_sem_acessibilidade: float | None = None
+    pct_com_agua_potavel: float | None = None
+    pct_com_energia_publica: float | None = None
+    pct_com_esgoto_rede_publica: float | None = None
+    pct_com_coleta_lixo: float | None = None
+    pct_com_quadra_esportes: float | None = None
+    pct_com_cozinha: float | None = None
+    pct_com_refeitorio: float | None = None
     avg_ideb_iniciais: float | None = None
     avg_ideb_finais: float | None = None
+    avg_ideb_ensino_medio: float | None = None
+    avg_afd_anos_iniciais: float | None = None
+    avg_afd_anos_finais: float | None = None
+    avg_afd_ensino_medio: float | None = None
+    avg_tdi_anos_iniciais: float | None = None
+    avg_tdi_anos_finais: float | None = None
+    avg_tdi_ensino_medio: float | None = None
+    avg_taxa_aprovacao_ai: float | None = None
+    avg_taxa_aprovacao_af: float | None = None
+    avg_taxa_aprovacao_em: float | None = None
+    avg_taxa_abandono_ai: float | None = None
+    avg_taxa_abandono_af: float | None = None
+    avg_taxa_abandono_em: float | None = None
+    avg_docentes_superior_ai: float | None = None
+    avg_docentes_superior_af: float | None = None
+    avg_docentes_superior_em: float | None = None
+    avg_horas_aula_ai: float | None = None
+    avg_horas_aula_af: float | None = None
+    avg_horas_aula_em: float | None = None
+    avg_alunos_turma_ai: float | None = None
+    avg_alunos_turma_af: float | None = None
+    avg_alunos_turma_em: float | None = None
 
 class SocioeconomicoStateStats(BaseModel):
     """Indicadores socioeconômicos agregados por estado - Média Ponderada."""
