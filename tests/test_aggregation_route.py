@@ -42,6 +42,17 @@ class FakeGetCityAggregationsUseCase:
                             "anoReferencia": 2022,
                             "fonte": "IBGE Censo Demografico 2022",
                             "populacao": {"total": 817511},
+                            "estruturaEtaria": {
+                                "pctCriancas0a9": 12.5,
+                                "pctIdosos60Mais": 15.1,
+                                "razaoDependencia": 44.2,
+                            },
+                        },
+                        "educacao": {
+                            "totalEscolas": 123,
+                            "totalMatriculas": 45678,
+                            "mediaIdebAnosIniciais": 5.7,
+                            "mediaIdebAnosFinais": 4.9,
                         },
                         "source": source,
                     },
@@ -122,6 +133,20 @@ async def test_get_city_aggregations_route_returns_200_and_feature_collection(mo
     assert payload["features"][0]["properties"]["source"] == "setor_indicadores"
     assert payload["features"][0]["geometry"]["coordinates"] == [-34.86, -7.12]
     assert payload["features"][0]["properties"]["socioeconomico"]["anoReferencia"] == 2022
+    assert (
+        payload["features"][0]["properties"]["socioeconomico"]["estruturaEtaria"][
+            "razaoDependencia"
+        ]
+        == 44.2
+    )
+    assert (
+        payload["features"][0]["properties"]["educacao"]["mediaIdebAnosIniciais"]
+        == 5.7
+    )
+    assert (
+        payload["features"][0]["properties"]["educacao"]["mediaIdebAnosFinais"]
+        == 4.9
+    )
 
 
 @pytest.mark.asyncio

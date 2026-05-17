@@ -65,10 +65,17 @@ async def test_get_cities_returns_primary_collection_when_available():
                 "anoReferencia": 2022,
                 "fonte": "IBGE Censo Demografico 2022",
                 "populacao": {"total": 1000},
+                "estruturaEtaria": {
+                    "pctCriancas0a9": 12.5,
+                    "pctIdosos60Mais": 15.1,
+                    "razaoDependencia": 44.2,
+                },
             },
             "educacao": {
                 "totalEscolas": 101,
                 "totalMatriculas": 51000,
+                "mediaIdebAnosIniciais": 5.7,
+                "mediaIdebAnosFinais": 4.9,
                 "pctComInternet": 98.5,
             },
         }
@@ -93,7 +100,13 @@ async def test_get_cities_returns_primary_collection_when_available():
     assert feature["properties"]["total_alunos"] == 51000
     assert feature["properties"]["pct_com_internet"] == 98.5
     assert feature["properties"]["socioeconomico"]["anoReferencia"] == 2022
+    assert (
+        feature["properties"]["socioeconomico"]["estruturaEtaria"]["razaoDependencia"]
+        == 44.2
+    )
     assert feature["properties"]["educacao"]["totalMatriculas"] == 51000
+    assert feature["properties"]["educacao"]["mediaIdebAnosIniciais"] == 5.7
+    assert feature["properties"]["educacao"]["mediaIdebAnosFinais"] == 4.9
     assert setor_collection.last_aggregate_pipeline is None
 
 
@@ -112,6 +125,16 @@ async def test_get_cities_uses_setor_fallback_when_primary_missing():
                 "avg_ideb": 4.9,
                 "avg_lon": -34.85,
                 "avg_lat": -7.11,
+                "socioeconomico": {
+                    "anoReferencia": 2022,
+                    "estruturaEtaria": {"razaoDependencia": 44.2},
+                },
+                "educacao": {
+                    "totalEscolas": 80,
+                    "totalMatriculas": 42000,
+                    "mediaIdebAnosIniciais": 5.7,
+                    "mediaIdebAnosFinais": 4.9,
+                },
             }
         ]
     )
@@ -128,6 +151,12 @@ async def test_get_cities_uses_setor_fallback_when_primary_missing():
     feature = result["features"][0]
     assert feature["properties"]["source"] == "setor_indicadores"
     assert feature["geometry"]["coordinates"] == [-34.85, -7.11]
+    assert (
+        feature["properties"]["socioeconomico"]["estruturaEtaria"]["razaoDependencia"]
+        == 44.2
+    )
+    assert feature["properties"]["educacao"]["mediaIdebAnosIniciais"] == 5.7
+    assert feature["properties"]["educacao"]["mediaIdebAnosFinais"] == 4.9
     assert setor_collection.last_aggregate_pipeline is not None
     assert {
         "$or": [
@@ -135,6 +164,12 @@ async def test_get_cities_uses_setor_fallback_when_primary_missing():
             {"municipioIdIbge": "2507507"},
         ]
     } in setor_collection.last_aggregate_pipeline[0]["$match"]["$and"]
+    group_stage = setor_collection.last_aggregate_pipeline[2]["$group"]
+    project_stage = setor_collection.last_aggregate_pipeline[3]["$project"]
+    assert group_stage["socioeconomico"] == {"$first": "$socioeconomico"}
+    assert group_stage["educacao"] == {"$first": "$educacao"}
+    assert project_stage["socioeconomico"] == 1
+    assert project_stage["educacao"] == 1
 
 
 @pytest.mark.asyncio

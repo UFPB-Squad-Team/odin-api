@@ -3,6 +3,9 @@ from typing import Any, Literal
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
+INDICATOR_MODEL_CONFIG = ConfigDict(extra="allow")
+
+
 class AggregationPointGeometry(BaseModel):
     type: Literal["Point"]
     coordinates: tuple[float, float]
@@ -14,6 +17,8 @@ class AggregationGeometry(BaseModel):
 
 
 class SocioeconomicoPopulacao(BaseModel):
+    model_config = INDICATOR_MODEL_CONFIG
+
     total: int | None = None
     totalDomiciliosParticulares: int | None = None
     totalDomicilios: int | None = None
@@ -21,13 +26,18 @@ class SocioeconomicoPopulacao(BaseModel):
 
 
 class SocioeconomicoEstruturaEtaria(BaseModel):
+    model_config = INDICATOR_MODEL_CONFIG
+
     pctCriancas0a9: float | int | None = None
     pctIdosos60Mais: float | int | None = None
     pctJovens15a29: float | int | None = None
     pctAdultos30a59: float | int | None = None
+    razaoDependencia: float | int | None = None
 
 
 class SocioeconomicoRaca(BaseModel):
+    model_config = INDICATOR_MODEL_CONFIG
+
     pctPretaParda: float | int | None = None
     pctBranca: float | int | None = None
     pctIndigena: float | int | None = None
@@ -39,6 +49,8 @@ class SocioeconomicoGenero(BaseModel):
 
 
 class SocioeconomicoSaneamento(BaseModel):
+    model_config = INDICATOR_MODEL_CONFIG
+
     pctAguaRedeGeral: float | int | None = None
     pctAguaInadequada: float | int | None = None
     pctAguaNaoEncanada: float | int | None = None
@@ -50,17 +62,25 @@ class SocioeconomicoSaneamento(BaseModel):
 
 
 class SocioeconomicoEducacaoPopulacao(BaseModel):
+    model_config = INDICATOR_MODEL_CONFIG
+
     taxaAnalfabetismo15Mais: float | int | None = None
 
 
 class SocioeconomicoFamilia(BaseModel):
+    model_config = INDICATOR_MODEL_CONFIG
+
     pctResponsavelFeminino: float | int | None = None
 
 class SocioeconomicoMortalidade(BaseModel):
+    model_config = INDICATOR_MODEL_CONFIG
+
     totalObitosDomicilios: float | int | None = None
     obitosInfantis0a4: float | int | None = None
 
 class SocioeconomicoHabitacao(BaseModel):
+    model_config = INDICATOR_MODEL_CONFIG
+
     pctDomImprovisado: float | int | None = None
     pctDomSuperlotado: float | int | None = None
     pctDomUnipessoal: float | int | None = None
@@ -70,6 +90,8 @@ class SocioeconomicoHabitacao(BaseModel):
 
 
 class Socioeconomico(BaseModel):
+    model_config = INDICATOR_MODEL_CONFIG
+
     anoReferencia: int | None = None
     fonte: str | None = None
     populacao: SocioeconomicoPopulacao | None = None
@@ -84,9 +106,14 @@ class Socioeconomico(BaseModel):
 
 
 class EducacaoMunicipio(BaseModel):
+    model_config = INDICATOR_MODEL_CONFIG
+
     totalEscolas: int | None = None
     totalMatriculas: int | None = None
     totalBairros: int | None = None
+    mediaIdebAnosIniciais: float | int | None = None
+    mediaIdebAnosFinais: float | int | None = None
+    mediaIdebAnosFinals: float | int | None = None
     pctComInternet: float | int | None = None
     pctComBiblioteca: float | int | None = None
     pctComLabInformatica: float | int | None = None
