@@ -511,6 +511,8 @@ class MongoTerritorialAggregationRepository(
                     "pct_com_internet": {"$avg": "$pct_com_internet"},
                     "pct_com_lab_informatica": {"$avg": "$pct_com_lab_informatica"},
                     "pct_sem_acessibilidade": {"$avg": "$pct_sem_acessibilidade"},
+                    "socioeconomico": {"$first": "$socioeconomico"},
+                    "educacao": {"$first": "$educacao"},
                     "avg_lon": {"$avg": "$lon"},
                     "avg_lat": {"$avg": "$lat"},
                 }
@@ -528,6 +530,8 @@ class MongoTerritorialAggregationRepository(
                     "pct_com_internet": 1,
                     "pct_com_lab_informatica": 1,
                     "pct_sem_acessibilidade": 1,
+                    "socioeconomico": 1,
+                    "educacao": 1,
                     "avg_lon": 1,
                     "avg_lat": 1,
                 }
