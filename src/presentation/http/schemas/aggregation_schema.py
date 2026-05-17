@@ -16,22 +16,37 @@ class AggregationGeometry(BaseModel):
 class SocioeconomicoPopulacao(BaseModel):
     total: int | None = None
     totalDomiciliosParticulares: int | None = None
+    totalDomicilios: int | None = None
     mediaMoradoresPorDomicilio: float | int | None = None
 
 
 class SocioeconomicoEstruturaEtaria(BaseModel):
     pctCriancas0a9: float | int | None = None
     pctIdosos60Mais: float | int | None = None
+    pctJovens15a29: float | int | None = None
+    pctAdultos30a59: float | int | None = None
 
 
 class SocioeconomicoRaca(BaseModel):
     pctPretaParda: float | int | None = None
+    pctBranca: float | int | None = None
+    pctIndigena: float | int | None = None
+
+
+class SocioeconomicoGenero(BaseModel):
+    pctPopMasculina: float | int | None = None
+    pctPopFeminina: float | int | None = None
 
 
 class SocioeconomicoSaneamento(BaseModel):
     pctAguaRedeGeral: float | int | None = None
+    pctAguaInadequada: float | int | None = None
+    pctAguaNaoEncanada: float | int | None = None
     pctEsgotoRedeGeral: float | int | None = None
+    pctEsgotoInadequado: float | int | None = None
     pctLixoColetado: float | int | None = None
+    pctLixoInadequado: float | int | None = None
+    pctDomSemBanheiro: float | int | None = None
 
 
 class SocioeconomicoEducacaoPopulacao(BaseModel):
@@ -48,6 +63,10 @@ class SocioeconomicoMortalidade(BaseModel):
 class SocioeconomicoHabitacao(BaseModel):
     pctDomImprovisado: float | int | None = None
     pctDomSuperlotado: float | int | None = None
+    pctDomUnipessoal: float | int | None = None
+    pctDomTipoCasa: float | int | None = None
+    pctDomTipoApto: float | int | None = None
+    pctDomDegradado: float | int | None = None
 
 
 class Socioeconomico(BaseModel):
@@ -55,6 +74,7 @@ class Socioeconomico(BaseModel):
     fonte: str | None = None
     populacao: SocioeconomicoPopulacao | None = None
     estruturaEtaria: SocioeconomicoEstruturaEtaria | None = None
+    genero: SocioeconomicoGenero | None = None
     raca: SocioeconomicoRaca | None = None
     saneamento: SocioeconomicoSaneamento | None = None
     educacaoPopulacao: SocioeconomicoEducacaoPopulacao | None = None
@@ -67,10 +87,52 @@ class EducacaoMunicipio(BaseModel):
     totalEscolas: int | None = None
     totalMatriculas: int | None = None
     totalBairros: int | None = None
+    # Infraestrutura
+    pctComAguaPotavel: float | int | None = None
+    pctComEnergiaPublica: float | int | None = None
+    pctComEsgotoRedePublica: float | int | None = None
+    pctComColetaLixo: float | int | None = None
     pctComInternet: float | int | None = None
+    pctComInternetAlunos: float | int | None = None
     pctComBiblioteca: float | int | None = None
-    pctComLabInformatica: float | int | None = None
+    pctComLaboratorioInformatica: float | int | None = None
+    pctComLaboratorioCiencias: float | int | None = None
+    pctComQuadraEsportes: float | int | None = None
+    pctComCozinha: float | int | None = None
+    pctComRefeitorio: float | int | None = None
     pctSemAcessibilidade: float | int | None = None
+    # IDEB
+    mediaIdebAnosIniciais: float | None = None
+    mediaIdebAnosFinals: float | None = None
+    mediaIdebEnsinoMedio: float | None = None
+    # AFD
+    mediaAfdAnosIniciais: float | None = None
+    mediaAfdAnosFinais: float | None = None
+    mediaAfdEnsinoMedio: float | None = None
+    # TDI
+    mediaTdiAnosIniciais: float | None = None
+    mediaTdiAnosFinais: float | None = None
+    mediaTdiEnsinoMedio: float | None = None
+    # Taxas de Aprovação
+    mediaTaxaAprovacaoAi: float | None = None
+    mediaTaxaAprovacaoAf: float | None = None
+    mediaTaxaAprovacaoEm: float | None = None
+    # Taxas de Abandono
+    mediaTaxaAbandonoAi: float | None = None
+    mediaTaxaAbandonoAf: float | None = None
+    mediaTaxaAbandonoEm: float | None = None
+    # Docentes com Ensino Superior
+    mediaDocentesSuperiorAi: float | None = None
+    mediaDocentesSuperiorAf: float | None = None
+    mediaDocentesSuperiorEm: float | None = None
+    # Horas Aula Diárias
+    mediaHorasAulaAi: float | None = None
+    mediaHorasAulaAf: float | None = None
+    mediaHorasAulaEm: float | None = None
+    # Alunos por Turma
+    mediaAlunosTurmaAi: float | None = None
+    mediaAlunosTurmaAf: float | None = None
+    mediaAlunosTurmaEm: float | None = None
 
 
 class CityAggregationProperties(BaseModel):
@@ -83,7 +145,9 @@ class CityAggregationProperties(BaseModel):
     avg_ideb: float | int | None = None
     pct_com_biblioteca: float | int | None = None
     pct_com_internet: float | int | None = None
+    pct_com_internet_alunos: float | int | None = None
     pct_com_lab_informatica: float | int | None = None
+    pct_com_lab_ciencias: float | int | None = None
     pct_sem_acessibilidade: float | int | None = None
     socioeconomico: Socioeconomico | None = None
     educacao: EducacaoMunicipio | None = None
@@ -126,7 +190,9 @@ class MongoNeighborhoodAggregation(BaseModel):
     )
     pct_com_biblioteca: float | int | None = None
     pct_com_internet: float | int | None = None
+    pct_com_internet_alunos: float | int | None = None
     pct_com_lab_informatica: float | int | None = None
+    pct_com_lab_ciencias: float | int | None = None
     pct_sem_acessibilidade: float | int | None = None
     sg_uf: str | None = None
     total_escolas: int
@@ -154,7 +220,9 @@ class NeighborhoodAggregationProperties(BaseModel):
     avg_ideb: float | int | None = None
     pct_com_biblioteca: float | int | None = None
     pct_com_internet: float | int | None = None
+    pct_com_internet_alunos: float | int | None = None
     pct_com_lab_informatica: float | int | None = None
+    pct_com_lab_ciencias: float | int | None = None
     pct_sem_acessibilidade: float | int | None = None
     tem_bairro_oficial: bool = Field(serialization_alias="tem_bairro_oficial")
     nivel: Literal["bairro", "setor"] = "bairro"

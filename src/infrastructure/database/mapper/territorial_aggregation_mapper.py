@@ -161,12 +161,29 @@ class TerritorialAggregationMapper:
                 default=cls._pick(doc, "pct_com_internet"),
             )
         )
+        pct_com_internet_alunos = cls._as_float(
+            cls._pick_nested(
+                doc,
+                ("educacao", "pctComInternetAlunos"),
+                ("educacao", "pct_com_internet_alunos"),
+                default=cls._pick(doc, "pct_com_internet_alunos"),
+            )
+        )
         pct_com_lab_informatica = cls._as_float(
             cls._pick_nested(
                 doc,
+                ("educacao", "pctComLaboratorioInformatica"),
                 ("educacao", "pctComLabInformatica"),
                 ("educacao", "pct_com_lab_informatica"),
                 default=cls._pick(doc, "pct_com_lab_informatica"),
+            )
+        )
+        pct_com_lab_ciencias = cls._as_float(
+            cls._pick_nested(
+                doc,
+                ("educacao", "pctComLaboratorioCiencias"),
+                ("educacao", "pct_com_lab_ciencias"),
+                default=cls._pick(doc, "pct_com_lab_ciencias"),
             )
         )
         pct_sem_acessibilidade = cls._as_float(
@@ -207,7 +224,9 @@ class TerritorialAggregationMapper:
             avg_ideb=cls._as_float(cls._pick(doc, "avg_ideb", "ideb_medio", "ideb")),
             pct_com_biblioteca=pct_com_biblioteca,
             pct_com_internet=pct_com_internet,
+            pct_com_internet_alunos=pct_com_internet_alunos,
             pct_com_lab_informatica=pct_com_lab_informatica,
+            pct_com_lab_ciencias=pct_com_lab_ciencias,
             pct_sem_acessibilidade=pct_sem_acessibilidade,
             socioeconomico=doc.get("socioeconomico") if isinstance(doc.get("socioeconomico"), dict) else None,
             educacao=doc.get("educacao") if isinstance(doc.get("educacao"), dict) else None,
@@ -265,8 +284,14 @@ class TerritorialAggregationMapper:
             avg_ideb=cls._as_float(cls._pick(doc, "avg_ideb", "ideb_medio", "ideb")),
             pct_com_biblioteca=cls._as_float(cls._pick(doc, "pct_com_biblioteca")),
             pct_com_internet=cls._as_float(cls._pick(doc, "pct_com_internet")),
+            pct_com_internet_alunos=cls._as_float(
+                cls._pick(doc, "pct_com_internet_alunos")
+            ),
             pct_com_lab_informatica=cls._as_float(
                 cls._pick(doc, "pct_com_lab_informatica")
+            ),
+            pct_com_lab_ciencias=cls._as_float(
+                cls._pick(doc, "pct_com_lab_ciencias")
             ),
             pct_sem_acessibilidade=cls._as_float(
                 cls._pick(doc, "pct_sem_acessibilidade")
@@ -302,7 +327,9 @@ class TerritorialAggregationMapper:
                 "avg_ideb": city.avg_ideb,
                 "pct_com_biblioteca": city.pct_com_biblioteca,
                 "pct_com_internet": city.pct_com_internet,
+                "pct_com_internet_alunos": city.pct_com_internet_alunos,
                 "pct_com_lab_informatica": city.pct_com_lab_informatica,
+                "pct_com_lab_ciencias": city.pct_com_lab_ciencias,
                 "pct_sem_acessibilidade": city.pct_sem_acessibilidade,
                 "socioeconomico": city.socioeconomico,
                 "educacao": city.educacao,
@@ -341,7 +368,9 @@ class TerritorialAggregationMapper:
                 "avg_ideb": neighborhood.avg_ideb,
                 "pct_com_biblioteca": neighborhood.pct_com_biblioteca,
                 "pct_com_internet": neighborhood.pct_com_internet,
+                "pct_com_internet_alunos": neighborhood.pct_com_internet_alunos,
                 "pct_com_lab_informatica": neighborhood.pct_com_lab_informatica,
+                "pct_com_lab_ciencias": neighborhood.pct_com_lab_ciencias,
                 "pct_sem_acessibilidade": neighborhood.pct_sem_acessibilidade,
                 "tem_bairro_official": neighborhood.tem_bairro_official,
                 "source": neighborhood.source,

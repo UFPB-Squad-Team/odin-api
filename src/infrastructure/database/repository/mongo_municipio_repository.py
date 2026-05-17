@@ -143,7 +143,9 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
             "educacao.totalBairros": 1,
             "educacao.pctComBiblioteca": 1,
             "educacao.pctComInternet": 1,
-            "educacao.pctComLabInformatica": 1,
+            "educacao.pctComInternetAlunos": 1,
+            "educacao.pctComLaboratorioInformatica": 1,
+            "educacao.pctComLaboratorioCiencias": 1,
             "educacao.pctSemAcessibilidade": 1,
             "educacao.mediaIdebAnosIniciais": 1,
             "educacao.mediaIdebAnosFinals": 1,
@@ -151,6 +153,7 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
             "socioeconomico.fonte": 1,
             "socioeconomico.populacao": 1,
             "socioeconomico.estruturaEtaria": 1,
+            "socioeconomico.genero": 1,
             "socioeconomico.raca": 1,
             "socioeconomico.saneamento": 1,
             "socioeconomico.educacaoPopulacao": 1,
@@ -225,6 +228,7 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
         educacao_payload.setdefault("pctComBiblioteca", city.pct_com_biblioteca)
         educacao_payload.setdefault("pctComInternet", city.pct_com_internet)
         educacao_payload.setdefault("pctComLabInformatica", city.pct_com_lab_informatica)
+        educacao_payload.setdefault("pctComLaboratorioInformatica", city.pct_com_lab_informatica)
         educacao_payload.setdefault("pctSemAcessibilidade", city.pct_sem_acessibilidade)
         educacao_payload.setdefault(
             "mediaIdebAnosIniciais",

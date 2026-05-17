@@ -257,6 +257,7 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             "dependenciaAdm": 1,
             "tipoLocalizacao": 1,
             "indicadores": 1,
+            "matriculas": 1,
             "localizacao": 1,
         }
 
@@ -279,6 +280,8 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             if inse is not None:
                 indicadores["inse"] = inse
 
+            matriculas = doc.get("matriculas") or {}
+
             features.append(
                 {
                     "type": "Feature",
@@ -294,6 +297,7 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
                         "indicadores": indicadores,
                         "anoReferencia": ano_referencia,
                         "totalAlunos": total_alunos,
+                        "matriculas": matriculas if matriculas else None,
                         "municipio_nome": doc.get("municipioNome"),
                         "municipioIdIbge": (
                             str(municipio_id_ibge)

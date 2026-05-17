@@ -12,5 +12,14 @@ def test_mapper_converts_mongo_document_into_school():
     assert school.escola_nome == "Escola A"
     assert school.endereco.bairro == "Centro"
     assert school.indicadores.totalAlunos == 120
+    assert school.matriculas.totalAlunos == 270
+    assert school.matriculas.educacaoInfantil == 45
+    assert school.matriculas.educacaoInfantilCreche == 15
+    assert school.matriculas.educacaoInfantilPreEscola == 30
+    assert school.matriculas.fundamentalTotal == 120
+    assert school.matriculas.fundamentalAnosIniciais == 70
+    assert school.matriculas.fundamentalAnosFinais == 50
+    assert school.matriculas.ensinoMedio == 80
+    assert school.matriculas.eja == 25
     assert school.infraestrutura.possuiAguaPotavel is True
     assert school.infraestrutura.equipamentos.desktopAluno is True

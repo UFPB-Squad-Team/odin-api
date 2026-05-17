@@ -15,7 +15,9 @@ class CitySummary(BaseModel):
     avg_ideb: float | None = None
     pct_com_biblioteca: float | None = None
     pct_com_internet: float | None = None
+    pct_com_internet_alunos: float | None = None
     pct_com_lab_informatica: float | None = None
+    pct_com_lab_ciencias: float | None = None
     pct_sem_acessibilidade: float | None = None
     socioeconomico: dict | None = None
     educacao: dict | None = None
@@ -48,7 +50,9 @@ class NeighborhoodSummary(BaseModel):
     avg_ideb: float | None = None
     pct_com_biblioteca: float | None = None
     pct_com_internet: float | None = None
+    pct_com_internet_alunos: float | None = None
     pct_com_lab_informatica: float | None = None
+    pct_com_lab_ciencias: float | None = None
     pct_sem_acessibilidade: float | None = None
     tem_bairro_official: bool = True
     coordinates: tuple[float, float] | None = Field(

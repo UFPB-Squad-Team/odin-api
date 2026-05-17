@@ -18,26 +18,75 @@ class StateSummaryFactory:
         total_escolas = sum(c.educacao.total_escolas for c in cities)
         total_alunos = sum(c.educacao.total_alunos for c in cities)
 
-        escolas_biblioteca = sum(c.educacao.total_escolas * c.educacao.pct_com_biblioteca for c in cities)
-        escolas_internet = sum(c.educacao.total_escolas * c.educacao.pct_com_internet for c in cities)
-        escolas_lab = sum(c.educacao.total_escolas * c.educacao.pct_com_lab_informatica for c in cities)
-        escolas_sem_acess = sum(c.educacao.total_escolas * c.educacao.pct_sem_acessibilidade for c in cities)
+        # Weighted averages by number of schools (infrastructure percentages)
+        def _pct_weighted_by_schools(field: str) -> float | None:
+            numerator = sum(
+                c.educacao.total_escolas * getattr(c.educacao, field)
+                for c in cities if c.educacao.total_escolas > 0
+            )
+            return cls._safe_div(numerator, total_escolas)
 
-        soma_ideb_inic = sum(c.educacao.ideb_iniciais * c.educacao.total_alunos for c in cities if c.educacao.ideb_iniciais > 0)
-        alunos_ideb_inic = sum(c.educacao.total_alunos for c in cities if c.educacao.ideb_iniciais > 0)
-
-        soma_ideb_fin = sum(c.educacao.ideb_finais * c.educacao.total_alunos for c in cities if c.educacao.ideb_finais > 0)
-        alunos_ideb_fin = sum(c.educacao.total_alunos for c in cities if c.educacao.ideb_finais > 0)
+        # Weighted averages by number of students (academic indicators)
+        def _avg_weighted_by_alunos(field: str) -> float | None:
+            numerator = sum(
+                getattr(c.educacao, field) * c.educacao.total_alunos
+                for c in cities if getattr(c.educacao, field) > 0
+            )
+            denominator = sum(
+                c.educacao.total_alunos
+                for c in cities if getattr(c.educacao, field) > 0
+            )
+            return cls._safe_div(numerator, denominator)
 
         return EducacaoStateStats(
             total_escolas=total_escolas,
             total_alunos=total_alunos,
-            pct_com_biblioteca=cls._safe_div(escolas_biblioteca, total_escolas),
-            pct_com_internet=cls._safe_div(escolas_internet, total_escolas),
-            pct_com_lab_informatica=cls._safe_div(escolas_lab, total_escolas),
-            pct_sem_acessibilidade=cls._safe_div(escolas_sem_acess, total_escolas),
-            avg_ideb_iniciais=cls._safe_div(soma_ideb_inic, alunos_ideb_inic),
-            avg_ideb_finais=cls._safe_div(soma_ideb_fin, alunos_ideb_fin)
+            # Infrastructure (weighted by schools)
+            pct_com_biblioteca=_pct_weighted_by_schools("pct_com_biblioteca"),
+            pct_com_internet=_pct_weighted_by_schools("pct_com_internet"),
+            pct_com_internet_alunos=_pct_weighted_by_schools("pct_com_internet_alunos"),
+            pct_com_lab_informatica=_pct_weighted_by_schools("pct_com_lab_informatica"),
+            pct_com_lab_ciencias=_pct_weighted_by_schools("pct_com_lab_ciencias"),
+            pct_sem_acessibilidade=_pct_weighted_by_schools("pct_sem_acessibilidade"),
+            pct_com_agua_potavel=_pct_weighted_by_schools("pct_com_agua_potavel"),
+            pct_com_energia_publica=_pct_weighted_by_schools("pct_com_energia_publica"),
+            pct_com_esgoto_rede_publica=_pct_weighted_by_schools("pct_com_esgoto_rede_publica"),
+            pct_com_coleta_lixo=_pct_weighted_by_schools("pct_com_coleta_lixo"),
+            pct_com_quadra_esportes=_pct_weighted_by_schools("pct_com_quadra_esportes"),
+            pct_com_cozinha=_pct_weighted_by_schools("pct_com_cozinha"),
+            pct_com_refeitorio=_pct_weighted_by_schools("pct_com_refeitorio"),
+            # IDEB (weighted by students)
+            avg_ideb_iniciais=_avg_weighted_by_alunos("ideb_iniciais"),
+            avg_ideb_finais=_avg_weighted_by_alunos("ideb_finais"),
+            avg_ideb_ensino_medio=_avg_weighted_by_alunos("ideb_ensino_medio"),
+            # AFD (weighted by students)
+            avg_afd_anos_iniciais=_avg_weighted_by_alunos("media_afd_anos_iniciais"),
+            avg_afd_anos_finais=_avg_weighted_by_alunos("media_afd_anos_finais"),
+            avg_afd_ensino_medio=_avg_weighted_by_alunos("media_afd_ensino_medio"),
+            # TDI (weighted by students)
+            avg_tdi_anos_iniciais=_avg_weighted_by_alunos("media_tdi_anos_iniciais"),
+            avg_tdi_anos_finais=_avg_weighted_by_alunos("media_tdi_anos_finais"),
+            avg_tdi_ensino_medio=_avg_weighted_by_alunos("media_tdi_ensino_medio"),
+            # Approval rates (weighted by students)
+            avg_taxa_aprovacao_ai=_avg_weighted_by_alunos("media_taxa_aprovacao_ai"),
+            avg_taxa_aprovacao_af=_avg_weighted_by_alunos("media_taxa_aprovacao_af"),
+            avg_taxa_aprovacao_em=_avg_weighted_by_alunos("media_taxa_aprovacao_em"),
+            # Dropout rates (weighted by students)
+            avg_taxa_abandono_ai=_avg_weighted_by_alunos("media_taxa_abandono_ai"),
+            avg_taxa_abandono_af=_avg_weighted_by_alunos("media_taxa_abandono_af"),
+            avg_taxa_abandono_em=_avg_weighted_by_alunos("media_taxa_abandono_em"),
+            # Teachers with higher education (weighted by students)
+            avg_docentes_superior_ai=_avg_weighted_by_alunos("media_docentes_superior_ai"),
+            avg_docentes_superior_af=_avg_weighted_by_alunos("media_docentes_superior_af"),
+            avg_docentes_superior_em=_avg_weighted_by_alunos("media_docentes_superior_em"),
+            # Hours per day (weighted by students)
+            avg_horas_aula_ai=_avg_weighted_by_alunos("media_horas_aula_ai"),
+            avg_horas_aula_af=_avg_weighted_by_alunos("media_horas_aula_af"),
+            avg_horas_aula_em=_avg_weighted_by_alunos("media_horas_aula_em"),
+            # Students per class (weighted by students)
+            avg_alunos_turma_ai=_avg_weighted_by_alunos("media_alunos_turma_ai"),
+            avg_alunos_turma_af=_avg_weighted_by_alunos("media_alunos_turma_af"),
+            avg_alunos_turma_em=_avg_weighted_by_alunos("media_alunos_turma_em"),
         )
 
     @classmethod
