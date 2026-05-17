@@ -36,6 +36,7 @@ from src.presentation.http.controller.state.index import router as state_control
 
 
 load_dotenv()
+
 school_container.wire(modules=[
     "src.presentation.http.controller.school.list_all_schools_controller",
     "src.presentation.http.controller.school.get_school_by_id_controller",
@@ -55,12 +56,9 @@ bairro_container.wire(modules=[
     "src.presentation.http.controller.bairro.bairro_controller",
 ])
 
-aggregation_container.wire(modules=[
-    "src.presentation.http.controller.aggregation.aggregations_controller",
-])
-
 state_container.wire(modules=[
     "src.presentation.http.controller.state.get_state_summary_controller",
+    "src.presentation.http.controller.state.list_states_controller",
 ])
 
 @asynccontextmanager
@@ -91,12 +89,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 register_global_exception_handlers(app)
 
+app.include_router(state_controller, prefix="/api/v1", tags=["estados"])
 app.include_router(municipio_controller, prefix="/api/v1", tags=["municipios"])
 app.include_router(school_controller, prefix="/api/v1", tags=["schools"])
 app.include_router(bairro_controller, prefix="/api/v1", tags=["bairros"])
 app.include_router(aggregation_controller, prefix="/api/v1", tags=["aggregations"])
 app.include_router(stats_router, prefix="/api/v1", tags=["stats"])
-app.include_router(state_controller, prefix="/api/v1", tags=["estados"])
