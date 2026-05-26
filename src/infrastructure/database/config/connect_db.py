@@ -112,11 +112,42 @@ class MongoDB:
                     f"idx_bairro_indicadores_{municipio_field}_{bairro_field}",
                 )
 
+        await self._create_or_replace_index(
+            schools,
+            [("escolaNome", ASCENDING)],
+            "idx_escolas_nome_busca",
+            collation={"locale": "pt", "strength": 1},
+        )
+        await self._create_or_replace_index(
+            schools,
+            [("endereco.logradouro", ASCENDING)],
+            "idx_escolas_logradouro_busca",
+            collation={"locale": "pt", "strength": 1},
+        )
+        await self._create_or_replace_index(
+            schools,
+            [("endereco.cep", ASCENDING)],
+            "idx_escolas_cep_busca",
+        )
+        await self._create_or_replace_index(
+            municipios,
+            [("municipio", ASCENDING)],
+            "idx_municipio_nome_busca",
+            collation={"locale": "pt", "strength": 1},
+        )
+        await self._create_or_replace_index(
+            bairros,
+            [("bairro", ASCENDING)],
+            "idx_bairro_nome_busca",
+            collation={"locale": "pt", "strength": 1},
+        )
+
     async def _create_or_replace_index(
         self,
         collection: Any,
         index_spec: list[tuple[str, int]],
         index_name: str,
+        **kwargs: Any,
     ):
         """Create or replace index, handling conflicts gracefully."""
         try:
@@ -124,6 +155,7 @@ class MongoDB:
                 index_spec,
                 name=index_name,
                 background=True,
+                **kwargs,
             )
         except PyMongoError as exc:
             error_msg = str(exc)
@@ -148,6 +180,7 @@ class MongoDB:
                         index_spec,
                         name=index_name,
                         background=True,
+                        **kwargs,
                     )
                     logger.info(f"Created index: {index_name}")
                 except Exception as inner_exc:

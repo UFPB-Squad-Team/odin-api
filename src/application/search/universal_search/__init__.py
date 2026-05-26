@@ -1,0 +1,1 @@
+"""Universal search application module."""
