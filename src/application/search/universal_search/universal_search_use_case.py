@@ -196,25 +196,43 @@ class UniversalSearchUseCase:
             return None
 
     @classmethod
+    def _first_coordinate_pair(cls, value: Any) -> tuple[float, float] | None:
+        if isinstance(value, dict):
+            coordinates = value.get("coordinates")
+            if coordinates is not None:
+                return cls._first_coordinate_pair(coordinates)
+            return None
+
+        if isinstance(value, (list, tuple)):
+            if len(value) >= 2:
+                lon = cls._as_float(value[0])
+                lat = cls._as_float(value[1])
+                if lon is not None and lat is not None:
+                    return (lon, lat)
+
+            for item in value:
+                pair = cls._first_coordinate_pair(item)
+                if pair is not None:
+                    return pair
+
+        return None
+
+    @classmethod
     def _extract_coordinates(cls, doc: dict[str, Any]) -> tuple[float, float] | None:
-        coordinates = doc.get("coordinates")
-        if isinstance(coordinates, (list, tuple)) and len(coordinates) >= 2:
-            lon = cls._as_float(coordinates[0])
-            lat = cls._as_float(coordinates[1])
-            if lon is not None and lat is not None:
-                return (lon, lat)
+        coordinates = cls._first_coordinate_pair(doc.get("coordinates"))
+        if coordinates is not None:
+            return coordinates
 
         for path in (
             ("localizacao", "coordinates"),
             ("centroide", "coordinates"),
+            ("geometria", "coordinates"),
             ("geometry", "coordinates"),
         ):
             nested = cls._pick_nested(doc, path)
-            if isinstance(nested, (list, tuple)) and len(nested) >= 2:
-                lon = cls._as_float(nested[0])
-                lat = cls._as_float(nested[1])
-                if lon is not None and lat is not None:
-                    return (lon, lat)
+            coordinates = cls._first_coordinate_pair(nested)
+            if coordinates is not None:
+                return coordinates
 
         lon = cls._as_float(cls._pick(doc, "avg_lon", "longitude", "lon"))
         lat = cls._as_float(cls._pick(doc, "avg_lat", "latitude", "lat"))
@@ -376,7 +394,7 @@ class UniversalSearchUseCase:
         if coordinates is None:
             return None
 
-        bairro = cls._as_str(cls._pick(doc, "bairro", "nm_bairro", "nome_area"))
+        bairro = cls._as_str(cls._pick(doc, "bairro", "bairro_oficial", "nm_bairro", "nome_area", "situacao"))
         municipio_id = cls._as_str(cls._pick(doc, "municipioIdIbge", "municipio_id_ibge", "co_municipio", "idIbge"))
         municipio_nome = cls._as_str(cls._pick(doc, "municipio", "nm_municipio", "municipioNome", "municipio_nome"))
         bairro_code = cls._pick(doc, "cd_bairro_ibge", "cd_bairro")

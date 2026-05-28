@@ -366,6 +366,7 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
             "bairro": 1,
             "nm_bairro": 1,
             "nome_area": 1,
+            "geometria": 1,
             "municipio": 1,
             "nm_municipio": 1,
             "municipioNome": 1,

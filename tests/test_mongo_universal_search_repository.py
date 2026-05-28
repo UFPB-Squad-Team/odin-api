@@ -136,3 +136,30 @@ async def test_search_logradouros_builds_group_pipeline():
     assert match_stage["$and"][0]["endereco.logradouro"]["$regex"].startswith("^")
     assert "[eEéÉèÈêÊëË]" in match_stage["$and"][0]["endereco.logradouro"]["$regex"]
     assert escolas.last_aggregate_pipeline[-1]["$limit"] == 3
+
+
+@pytest.mark.asyncio
+async def test_search_bairros_projects_geometria_and_extracts_coordinates():
+    bairros = FakeCollection(
+        find_responses=[
+            [
+                {
+                    "bairro": "Tambau",
+                    "municipio": "Joao Pessoa",
+                    "municipioIdIbge": "2507507",
+                    "cd_bairro_ibge": "2507507005",
+                    "geometria": {
+                        "type": "MultiPolygon",
+                        "coordinates": [[[[ -34.83, -7.10 ], [ -34.82, -7.10 ], [ -34.82, -7.11 ], [ -34.83, -7.11 ], [ -34.83, -7.10 ]]]],
+                    },
+                }
+            ]
+        ]
+    )
+    repository = MongoUniversalSearchRepository(FakeCollection(), FakeCollection(), bairros)
+
+    docs = await repository.search_bairros("Tambau", municipio_id="2507507", limit=2)
+
+    assert len(docs) == 1
+    assert bairros.last_find_projection["geometria"] == 1
+    assert docs[0]["bairro"] == "Tambau"
