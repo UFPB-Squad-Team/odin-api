@@ -27,6 +27,12 @@ from src.presentation.http.controller.bairro.container import (
 from src.presentation.http.controller.bairro.index import (
     router as bairro_controller,
 )
+from src.presentation.http.controller.search.container import (
+    container as search_container,
+)
+from src.presentation.http.controller.search.index import (
+    router as search_controller,
+)
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
@@ -54,6 +60,10 @@ municipio_container.wire(modules=[
 
 bairro_container.wire(modules=[
     "src.presentation.http.controller.bairro.bairro_controller",
+])
+
+search_container.wire(modules=[
+    "src.presentation.http.controller.search.universal_search_controller",
 ])
 
 state_container.wire(modules=[
@@ -95,5 +105,6 @@ app.include_router(state_controller, prefix="/api/v1", tags=["estados"])
 app.include_router(municipio_controller, prefix="/api/v1", tags=["municipios"])
 app.include_router(school_controller, prefix="/api/v1", tags=["schools"])
 app.include_router(bairro_controller, prefix="/api/v1", tags=["bairros"])
+app.include_router(search_controller, prefix="/api/v1", tags=["busca"])
 app.include_router(aggregation_controller, prefix="/api/v1", tags=["aggregations"])
 app.include_router(stats_router, prefix="/api/v1", tags=["stats"])
