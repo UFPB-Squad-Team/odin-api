@@ -41,6 +41,7 @@ from src.presentation.http.middleware.global_exception_handler import (
     register_global_exception_handlers,
 )
 
+
 def setup_logging() -> None:
     """Configure structured logging for the application."""
     log_level = getattr(logging, config.log_level.upper(), logging.INFO)
