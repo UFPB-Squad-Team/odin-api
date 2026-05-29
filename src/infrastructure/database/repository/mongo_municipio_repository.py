@@ -182,7 +182,6 @@ class MongoMunicipioRepository(
 
     async def _count_official_neighborhoods(
         self,
-        *,
         municipio_id_ibge: str,
         municipio_nome: str | None = None,
     ) -> int:

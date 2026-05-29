@@ -11,7 +11,7 @@ class SummaryStats(BaseModel):
     por_zona: Dict[str, int]
 
     @classmethod
-    def from_dict(cls, data: Any):
+    def from_dict(cls, data: Any) -> "SummaryStats":
         if isinstance(data, cls):
             return data
         data = data or {}

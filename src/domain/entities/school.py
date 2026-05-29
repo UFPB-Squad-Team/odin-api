@@ -33,7 +33,7 @@ class School(BaseModel):
     infraestrutura: Infraestrutura = Field(default_factory=Infraestrutura)
 
     @model_validator(mode="after")
-    def validate_domain(self):
+    def validate_domain(self) -> "School":
         SchoolValidator(
             municipio_id_ibge=self.municipio_id_ibge,
             escola_id_inep=self.escola_id_inep,

@@ -66,6 +66,10 @@ prod: ## Inicia o servidor em modo produção (Gunicorn + Uvicorn workers)
 lint: ## Verifica estilo com ruff
 	uv run ruff check src/
 
+fix: ## Corrige automaticamente formatação e lint
+	uv run ruff format src/
+	uv run ruff check src/ --fix
+
 format: ## Formata o código com ruff
 	uv run ruff format src/
 

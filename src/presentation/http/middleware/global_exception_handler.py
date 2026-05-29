@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -81,13 +83,10 @@ async def _generic_exception_handler(_: Request, exc: Exception) -> JSONResponse
 
 
 def register_global_exception_handlers(app: FastAPI) -> None:
-    app.add_exception_handler(HTTPException, _http_exception_handler)
-    app.add_exception_handler(
-        RequestValidationError, _request_validation_exception_handler
-    )
-    app.add_exception_handler(
-        DomainValidationError, _domain_validation_exception_handler
-    )
-    app.add_exception_handler(PyMongoError, _mongo_exception_handler)
-    app.add_exception_handler(ValueError, _value_error_handler)
-    app.add_exception_handler(Exception, _generic_exception_handler)
+    add_exception_handler = cast(Any, app.add_exception_handler)
+    add_exception_handler(HTTPException, _http_exception_handler)
+    add_exception_handler(RequestValidationError, _request_validation_exception_handler)
+    add_exception_handler(DomainValidationError, _domain_validation_exception_handler)
+    add_exception_handler(PyMongoError, _mongo_exception_handler)
+    add_exception_handler(ValueError, _value_error_handler)
+    add_exception_handler(Exception, _generic_exception_handler)

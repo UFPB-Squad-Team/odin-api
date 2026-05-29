@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MunicipioCatalogItem(BaseModel):
@@ -168,52 +168,15 @@ class MunicipioResumo(BaseModel):
     tem_bairros_oficiais: bool = False
     educacao: EducacaoStats = Field(default_factory=EducacaoStats)
     socioeconomico: SocioeconomicoStats = Field(default_factory=SocioeconomicoStats)
+    total_escolas: int = 0
+    total_matriculas: int = 0
+    total_alunos: int = 0
+    pct_com_biblioteca: float | None = None
+    pct_com_internet: float | None = None
+    pct_com_lab_informatica: float | None = None
+    pct_sem_acessibilidade: float | None = None
+    avg_ideb: float | None = None
     source: str = Field(
         default="municipio_indicadores",
         description="Data source used to build this summary",
     )
-
-    @computed_field
-    @property
-    def total_escolas(self) -> int:
-        return int(self.educacao.totalEscolas or 0)
-
-    @computed_field
-    @property
-    def total_matriculas(self) -> int:
-        return int(self.educacao.totalMatriculas or 0)
-
-    @computed_field
-    @property
-    def total_alunos(self) -> int:
-        return int(self.educacao.totalMatriculas or 0)
-
-    @computed_field
-    @property
-    def pct_com_biblioteca(self) -> float | None:
-        return self.educacao.pctComBiblioteca
-
-    @computed_field
-    @property
-    def pct_com_internet(self) -> float | None:
-        return self.educacao.pctComInternet
-
-    @computed_field
-    @property
-    def pct_com_lab_informatica(self) -> float | None:
-        return self.educacao.pctComLaboratorioInformatica
-
-    @computed_field
-    @property
-    def pct_sem_acessibilidade(self) -> float | None:
-        return self.educacao.pctSemAcessibilidade
-
-    @computed_field
-    @property
-    def mediaIdebAnosIniciais(self) -> float | None:
-        return self.educacao.mediaIdebAnosIniciais
-
-    @computed_field
-    @property
-    def mediaIdebAnosFinals(self) -> float | None:
-        return self.educacao.mediaIdebAnosFinals

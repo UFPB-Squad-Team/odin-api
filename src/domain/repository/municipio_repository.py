@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
-from src.domain.entities.municipio import MunicipioCatalogItem, MunicipioResumo
+from src.domain.entities.municipio import MunicipioCatalogItem
 
 
 class IMunicipioRepository(ABC):
@@ -14,4 +15,4 @@ class IMunicipioRepository(ABC):
     async def get_resumo(
         self,
         municipio_id_ibge: str,
-    ) -> MunicipioResumo | None: ...
+    ) -> Any | None: ...

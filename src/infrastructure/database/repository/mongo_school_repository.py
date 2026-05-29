@@ -1,6 +1,7 @@
 import asyncio
 import time
 import unicodedata
+from typing import Any
 
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -227,7 +228,7 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
         if cached and (now - cached[0]) < self._paraiba_geojson_ttl_seconds:
             return cached[1]
 
-        match_query = {
+        match_query: dict[str, Any] = {
             "estadoSigla": "PB",
             "localizacao.type": "Point",
             "localizacao.coordinates.0": {"$type": "number"},
@@ -382,7 +383,7 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
         """
         Return a School domain object by its INEP identifier (`escolaIdInep`).
         """
-        candidates: list[dict] = []
+        candidates: list[dict[str, Any]] = []
 
         if isinstance(inep_id, int):
             candidates.append({"escolaIdInep": inep_id})
@@ -403,7 +404,7 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
         return self.mapper_to_domain(doc)
 
     async def get_bairro_by_school_id(self, school_id: str) -> dict | None:
-        candidates = [{"_id": school_id}]
+        candidates: list[dict[str, Any]] = [{"_id": school_id}]
 
         try:
             candidates.append({"_id": ObjectId(school_id)})
@@ -413,7 +414,7 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
         if school_id.isdigit():
             candidates.append({"escolaIdInep": int(school_id)})
 
-        query = {"$or": candidates}
+        query: dict[str, Any] = {"$or": candidates}
         projection = {
             "_id": 1,
             "escolaIdInep": 1,

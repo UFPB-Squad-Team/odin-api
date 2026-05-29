@@ -203,7 +203,7 @@ class MongoTerritorialAggregationRepository(
     async def get_resumo(
         self,
         municipio_id_ibge: str,
-    ) -> MunicipioResumo | None:
+    ) -> Any | None:
         query: dict[str, Any] = {
             "$or": [
                 {"co_municipio": municipio_id_ibge},
@@ -337,7 +337,11 @@ class MongoTerritorialAggregationRepository(
             source=source,
         )
 
-    async def _count_official_neighborhoods(self, municipio_id_ibge: str) -> int:
+    async def _count_official_neighborhoods(
+        self,
+        municipio_id_ibge: str,
+        municipio_nome: str | None = None,
+    ) -> int:
         query: dict[str, Any] = {
             "$or": [
                 {"municipioIdIbge": municipio_id_ibge},

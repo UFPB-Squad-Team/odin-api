@@ -3,6 +3,8 @@ Application configuration using pydantic-settings.
 Loads from environment variables with validation and type coercion.
 """
 
+from typing import Any, cast
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
@@ -58,4 +60,4 @@ class AppConfig(BaseSettings):
 
 
 # Singleton config instance
-config = AppConfig()
+config = cast(Any, AppConfig)()
