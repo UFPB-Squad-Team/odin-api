@@ -415,7 +415,9 @@ class MongoTerritorialAggregationRepository(
         }
 
         if code is not None:
-            municipality_clause = {"$or": municipio_clauses} if municipio_clauses else {}
+            municipality_clause = (
+                {"$or": municipio_clauses} if municipio_clauses else {}
+            )
             code_query: dict[str, Any] = {
                 "$and": [
                     municipality_clause,
@@ -435,7 +437,9 @@ class MongoTerritorialAggregationRepository(
                     },
                 ]
             }
-            code_doc = await self.bairro_collection.find_one(code_query, name_projection)
+            code_doc = await self.bairro_collection.find_one(
+                code_query, name_projection
+            )
             if code_doc:
                 resolved = TerritorialAggregationMapper._pick(
                     code_doc,
@@ -448,7 +452,9 @@ class MongoTerritorialAggregationRepository(
                 if isinstance(resolved, str) and resolved.strip():
                     return resolved.strip()
 
-        geometry = TerritorialAggregationMapper._pick(doc, "geometria", "geometry", default=None)
+        geometry = TerritorialAggregationMapper._pick(
+            doc, "geometria", "geometry", default=None
+        )
         if not isinstance(geometry, dict) or not geometry:
             return self._build_official_neighborhood_label(doc)
 
