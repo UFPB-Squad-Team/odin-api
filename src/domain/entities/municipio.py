@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 
 class MunicipioCatalogItem(BaseModel):
@@ -180,3 +180,31 @@ class MunicipioResumo(BaseModel):
         default="municipio_indicadores",
         description="Data source used to build this summary",
     )
+
+    @model_validator(mode="after")
+    def _populate_derived_fields(self) -> "MunicipioResumo":
+        if self.total_escolas == 0:
+            self.total_escolas = int(self.educacao.totalEscolas or 0)
+        if self.total_matriculas == 0:
+            self.total_matriculas = int(self.educacao.totalMatriculas or 0)
+        if self.total_alunos == 0:
+            self.total_alunos = int(self.educacao.totalMatriculas or 0)
+        if self.pct_com_biblioteca is None:
+            self.pct_com_biblioteca = self.educacao.pctComBiblioteca
+        if self.pct_com_internet is None:
+            self.pct_com_internet = self.educacao.pctComInternet
+        if self.pct_com_lab_informatica is None:
+            self.pct_com_lab_informatica = self.educacao.pctComLaboratorioInformatica
+        if self.pct_sem_acessibilidade is None:
+            self.pct_sem_acessibilidade = self.educacao.pctSemAcessibilidade
+        if self.avg_ideb is None:
+            self.avg_ideb = self.educacao.mediaIdebAnosIniciais
+        return self
+
+    @computed_field
+    def mediaIdebAnosIniciais(self) -> float | None:
+        return self.educacao.mediaIdebAnosIniciais
+
+    @computed_field
+    def mediaIdebAnosFinals(self) -> float | None:
+        return self.educacao.mediaIdebAnosFinals
