@@ -1,9 +1,10 @@
-from motor.motor_asyncio import AsyncIOMotorClient
-import unicodedata
 import asyncio
 import time
+import unicodedata
+
 from bson import ObjectId
 from bson.errors import InvalidId
+from motor.motor_asyncio import AsyncIOMotorClient
 
 from src.domain.entities.school import School
 from src.domain.repository.school_repository import ISchoolRepository
@@ -13,7 +14,6 @@ from src.infrastructure.database.config.app_config import config
 
 from ..mapper.school_mapper import MongoSchoolMapper
 from .base_mongo_repository import BaseMongoRepository
-
 
 SCHOOL_FIELD_MAP = {
     "id": "_id",
@@ -148,7 +148,9 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             self._paraiba_geojson_cache.items(),
             key=lambda item: item[1][0],
         )
-        to_remove = len(self._paraiba_geojson_cache) - self._paraiba_geojson_cache_max_keys
+        to_remove = (
+            len(self._paraiba_geojson_cache) - self._paraiba_geojson_cache_max_keys
+        )
         for key, _ in oldest_keys[:to_remove]:
             self._paraiba_geojson_cache.pop(key, None)
 
@@ -338,8 +340,12 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
                     "municipio_nome": {"$first": "$municipioNome"},
                     "qtd_escolas": {"$sum": 1},
                     "avg_ideb": {"$avg": "$indicadores.ideb"},
-                    "avg_lon": {"$avg": {"$arrayElemAt": ["$localizacao.coordinates", 0]}},
-                    "avg_lat": {"$avg": {"$arrayElemAt": ["$localizacao.coordinates", 1]}},
+                    "avg_lon": {
+                        "$avg": {"$arrayElemAt": ["$localizacao.coordinates", 0]}
+                    },
+                    "avg_lat": {
+                        "$avg": {"$arrayElemAt": ["$localizacao.coordinates", 1]}
+                    },
                 }
             },
             {"$sort": {"qtd_escolas": -1, "_id": 1}},
@@ -362,7 +368,8 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
                     },
                     "properties": {
                         "bairro": doc.get("_id"),
-                        "municipio_nome": doc.get("municipio_nome") or " ".join(municipio.split()),
+                        "municipio_nome": doc.get("municipio_nome")
+                        or " ".join(municipio.split()),
                         "qtd_escolas": doc.get("qtd_escolas", 0),
                         "avg_ideb": doc.get("avg_ideb"),
                     },

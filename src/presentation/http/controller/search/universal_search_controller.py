@@ -9,6 +9,7 @@ from src.application.search.universal_search.universal_search_dto import (
 from src.application.search.universal_search.universal_search_use_case import (
     UniversalSearchUseCase,
 )
+
 from .callable.search_callable import get_universal_search_use_case
 
 
@@ -33,7 +34,9 @@ router = APIRouter()
 
 @router.get("/busca/universal", response_model=UniversalSearchResponse)
 async def universal_search(
-    q: str = Query(..., min_length=2, description="Texto de busca (mínimo 2 caracteres)"),
+    q: str = Query(
+        ..., min_length=2, description="Texto de busca (mínimo 2 caracteres)"
+    ),
     sg_uf: str | None = Query(None, description="Filtrar por UF"),
     municipio_id: str | None = Query(None, description="Restringir a um município"),
     limit: int = Query(20, ge=1, le=20, description="Máximo de sugestões retornadas"),

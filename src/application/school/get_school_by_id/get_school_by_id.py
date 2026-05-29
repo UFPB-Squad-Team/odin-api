@@ -1,7 +1,9 @@
-from src.domain.repository.school_repository import ISchoolRepository
-from src.domain.entities.school import School
-from .get_school_by_id_dto import GetSchoolByIdDTO
 from typing import Optional
+
+from src.domain.entities.school import School
+from src.domain.repository.school_repository import ISchoolRepository
+
+from .get_school_by_id_dto import GetSchoolByIdDTO
 
 
 class GetSchoolById:

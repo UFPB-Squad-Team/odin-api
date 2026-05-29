@@ -30,12 +30,18 @@ class TerritorialAggregationMapper:
             return None
 
     @staticmethod
-    def _pick_nested(doc: dict[str, Any], *paths: tuple[str, ...], default: Any = None) -> Any:
+    def _pick_nested(
+        doc: dict[str, Any], *paths: tuple[str, ...], default: Any = None
+    ) -> Any:
         for path in paths:
             current: Any = doc
             found = True
             for key in path:
-                if isinstance(current, dict) and key in current and current[key] is not None:
+                if (
+                    isinstance(current, dict)
+                    and key in current
+                    and current[key] is not None
+                ):
                     current = current[key]
                 else:
                     found = False
@@ -127,7 +133,9 @@ class TerritorialAggregationMapper:
                 doc,
                 ("educacao", "totalEscolas"),
                 ("educacao", "total_escolas"),
-                default=cls._pick(doc, "total_escolas", "qtd_escolas", "escolas", default=0),
+                default=cls._pick(
+                    doc, "total_escolas", "qtd_escolas", "escolas", default=0
+                ),
             )
         )
         total_alunos = cls._as_int(
@@ -228,9 +236,15 @@ class TerritorialAggregationMapper:
             pct_com_lab_informatica=pct_com_lab_informatica,
             pct_com_lab_ciencias=pct_com_lab_ciencias,
             pct_sem_acessibilidade=pct_sem_acessibilidade,
-            socioeconomico=doc.get("socioeconomico") if isinstance(doc.get("socioeconomico"), dict) else None,
-            educacao=doc.get("educacao") if isinstance(doc.get("educacao"), dict) else None,
-            full_geometry=cls._extract_full_geometry(doc) if include_geometria else None,
+            socioeconomico=doc.get("socioeconomico")
+            if isinstance(doc.get("socioeconomico"), dict)
+            else None,
+            educacao=doc.get("educacao")
+            if isinstance(doc.get("educacao"), dict)
+            else None,
+            full_geometry=cls._extract_full_geometry(doc)
+            if include_geometria
+            else None,
             coordinates=cls._extract_coordinates(doc),
             source=source,
         )
@@ -265,7 +279,9 @@ class TerritorialAggregationMapper:
             ),
             bairro=str(bairro or ""),
             municipio=str(
-                cls._pick(doc, "nm_municipio", "municipio", "municipio_nome", default="")
+                cls._pick(
+                    doc, "nm_municipio", "municipio", "municipio_nome", default=""
+                )
             ),
             uf=cls._pick(doc, "sg_uf", "estado_sigla", "uf"),
             total_escolas=int(
@@ -290,9 +306,7 @@ class TerritorialAggregationMapper:
             pct_com_lab_informatica=cls._as_float(
                 cls._pick(doc, "pct_com_lab_informatica")
             ),
-            pct_com_lab_ciencias=cls._as_float(
-                cls._pick(doc, "pct_com_lab_ciencias")
-            ),
+            pct_com_lab_ciencias=cls._as_float(cls._pick(doc, "pct_com_lab_ciencias")),
             pct_sem_acessibilidade=cls._as_float(
                 cls._pick(doc, "pct_sem_acessibilidade")
             ),

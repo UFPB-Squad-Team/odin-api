@@ -40,7 +40,11 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
             "o": "oOóÓòÒôÔõÕöÖ",
             "u": "uUúÚùÙûÛüÜ",
         }
-        return f"[{re.escape(variants[char.lower()])}]" if char.lower() in variants else re.escape(char)
+        return (
+            f"[{re.escape(variants[char.lower()])}]"
+            if char.lower() in variants
+            else re.escape(char)
+        )
 
     @classmethod
     def _accent_insensitive_pattern(cls, value: str, *, prefix: bool = True) -> str:
@@ -50,7 +54,9 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
 
     @staticmethod
     def _regex_clause(q: str, *, prefix: bool = True) -> dict[str, Any]:
-        pattern = MongoUniversalSearchRepository._accent_insensitive_pattern(q, prefix=prefix)
+        pattern = MongoUniversalSearchRepository._accent_insensitive_pattern(
+            q, prefix=prefix
+        )
         return {"$regex": pattern, "$options": "i"}
 
     @staticmethod
@@ -118,7 +124,9 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
         if sg_uf:
             base_query = self._merge_and_clauses(base_query, self._sg_uf_clause(sg_uf))
         if municipio_id:
-            base_query = self._merge_and_clauses(base_query, self._municipio_id_clause(municipio_id))
+            base_query = self._merge_and_clauses(
+                base_query, self._municipio_id_clause(municipio_id)
+            )
 
         projection = {
             "_id": 1,
@@ -138,22 +146,32 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
         }
         projection.update(self._coordinates_projection())
 
-        cursor = self._escolas.find(base_query, projection).collation(self._PT_COLLATION).sort(
-            [("escolaNome", 1), ("escolaIdInep", 1)]
-        ).limit(limit)
+        cursor = (
+            self._escolas.find(base_query, projection)
+            .collation(self._PT_COLLATION)
+            .sort([("escolaNome", 1), ("escolaIdInep", 1)])
+            .limit(limit)
+        )
         docs = await cursor.to_list(length=limit)
         if docs:
             return docs
 
         fallback_query = {"escolaNome": self._regex_clause(normalized_q, prefix=False)}
         if sg_uf:
-            fallback_query = self._merge_and_clauses(fallback_query, self._sg_uf_clause(sg_uf))
+            fallback_query = self._merge_and_clauses(
+                fallback_query, self._sg_uf_clause(sg_uf)
+            )
         if municipio_id:
-            fallback_query = self._merge_and_clauses(fallback_query, self._municipio_id_clause(municipio_id))
+            fallback_query = self._merge_and_clauses(
+                fallback_query, self._municipio_id_clause(municipio_id)
+            )
 
-        fallback_cursor = self._escolas.find(fallback_query, projection).collation(self._PT_COLLATION).sort(
-            [("escolaNome", 1), ("escolaIdInep", 1)]
-        ).limit(limit)
+        fallback_cursor = (
+            self._escolas.find(fallback_query, projection)
+            .collation(self._PT_COLLATION)
+            .sort([("escolaNome", 1), ("escolaIdInep", 1)])
+            .limit(limit)
+        )
         return await fallback_cursor.to_list(length=limit)
 
     async def search_logradouros(
@@ -172,9 +190,13 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
                 "localizacao.type": "Point",
             }
             if sg_uf:
-                match_stage = self._merge_and_clauses(match_stage, self._sg_uf_clause(sg_uf))
+                match_stage = self._merge_and_clauses(
+                    match_stage, self._sg_uf_clause(sg_uf)
+                )
             if municipio_id:
-                match_stage = self._merge_and_clauses(match_stage, self._municipio_id_clause(municipio_id))
+                match_stage = self._merge_and_clauses(
+                    match_stage, self._municipio_id_clause(municipio_id)
+                )
 
             pipeline = [
                 {"$match": match_stage},
@@ -188,8 +210,12 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
                         },
                         "bairros": {"$addToSet": "$endereco.bairro"},
                         "count": {"$sum": 1},
-                        "avg_lon": {"$avg": {"$arrayElemAt": ["$localizacao.coordinates", 0]}},
-                        "avg_lat": {"$avg": {"$arrayElemAt": ["$localizacao.coordinates", 1]}},
+                        "avg_lon": {
+                            "$avg": {"$arrayElemAt": ["$localizacao.coordinates", 0]}
+                        },
+                        "avg_lat": {
+                            "$avg": {"$arrayElemAt": ["$localizacao.coordinates", 1]}
+                        },
                     }
                 },
                 {
@@ -232,9 +258,13 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
                 "endereco.cep": self._regex_clause(normalized_q, prefix=prefix),
             }
             if sg_uf:
-                match_query = self._merge_and_clauses(match_query, self._sg_uf_clause(sg_uf))
+                match_query = self._merge_and_clauses(
+                    match_query, self._sg_uf_clause(sg_uf)
+                )
             if municipio_id:
-                match_query = self._merge_and_clauses(match_query, self._municipio_id_clause(municipio_id))
+                match_query = self._merge_and_clauses(
+                    match_query, self._municipio_id_clause(municipio_id)
+                )
 
             pipeline = [
                 {"$match": match_query},
@@ -249,8 +279,12 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
                         "municipioIdIbge": {"$first": "$municipioIdIbge"},
                         "estadoSigla": {"$first": "$estadoSigla"},
                         "count": {"$sum": 1},
-                        "avg_lon": {"$avg": {"$arrayElemAt": ["$localizacao.coordinates", 0]}},
-                        "avg_lat": {"$avg": {"$arrayElemAt": ["$localizacao.coordinates", 1]}},
+                        "avg_lon": {
+                            "$avg": {"$arrayElemAt": ["$localizacao.coordinates", 0]}
+                        },
+                        "avg_lat": {
+                            "$avg": {"$arrayElemAt": ["$localizacao.coordinates", 1]}
+                        },
                     }
                 },
                 {
@@ -316,9 +350,12 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
             **self._coordinates_projection(),
         }
 
-        cursor = self._municipios.find(base_query, projection).collation(self._PT_COLLATION).sort(
-            [("municipio", 1), ("nm_municipio", 1), ("municipioNome", 1)]
-        ).limit(limit)
+        cursor = (
+            self._municipios.find(base_query, projection)
+            .collation(self._PT_COLLATION)
+            .sort([("municipio", 1), ("nm_municipio", 1), ("municipioNome", 1)])
+            .limit(limit)
+        )
         docs = await cursor.to_list(length=limit)
         if docs:
             return docs
@@ -331,11 +368,16 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
             ]
         }
         if sg_uf:
-            fallback_query = self._merge_and_clauses(fallback_query, self._sg_uf_clause(sg_uf))
+            fallback_query = self._merge_and_clauses(
+                fallback_query, self._sg_uf_clause(sg_uf)
+            )
 
-        fallback_cursor = self._municipios.find(fallback_query, projection).collation(self._PT_COLLATION).sort(
-            [("municipio", 1), ("nm_municipio", 1), ("municipioNome", 1)]
-        ).limit(limit)
+        fallback_cursor = (
+            self._municipios.find(fallback_query, projection)
+            .collation(self._PT_COLLATION)
+            .sort([("municipio", 1), ("nm_municipio", 1), ("municipioNome", 1)])
+            .limit(limit)
+        )
         return await fallback_cursor.to_list(length=limit)
 
     async def search_bairros(
@@ -357,7 +399,9 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
         if sg_uf:
             base_query = self._merge_and_clauses(base_query, self._sg_uf_clause(sg_uf))
         if municipio_id:
-            base_query = self._merge_and_clauses(base_query, self._municipio_id_clause(municipio_id))
+            base_query = self._merge_and_clauses(
+                base_query, self._municipio_id_clause(municipio_id)
+            )
 
         projection = {
             "_id": 1,
@@ -380,9 +424,12 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
             **self._coordinates_projection(),
         }
 
-        cursor = self._bairros.find(base_query, projection).collation(self._PT_COLLATION).sort(
-            [("bairro", 1), ("nm_bairro", 1), ("nome_area", 1)]
-        ).limit(limit)
+        cursor = (
+            self._bairros.find(base_query, projection)
+            .collation(self._PT_COLLATION)
+            .sort([("bairro", 1), ("nm_bairro", 1), ("nome_area", 1)])
+            .limit(limit)
+        )
         docs = await cursor.to_list(length=limit)
         if docs:
             return docs
@@ -395,11 +442,18 @@ class MongoUniversalSearchRepository(IUniversalSearchRepository):
             ]
         }
         if sg_uf:
-            fallback_query = self._merge_and_clauses(fallback_query, self._sg_uf_clause(sg_uf))
+            fallback_query = self._merge_and_clauses(
+                fallback_query, self._sg_uf_clause(sg_uf)
+            )
         if municipio_id:
-            fallback_query = self._merge_and_clauses(fallback_query, self._municipio_id_clause(municipio_id))
+            fallback_query = self._merge_and_clauses(
+                fallback_query, self._municipio_id_clause(municipio_id)
+            )
 
-        fallback_cursor = self._bairros.find(fallback_query, projection).collation(self._PT_COLLATION).sort(
-            [("bairro", 1), ("nm_bairro", 1), ("nome_area", 1)]
-        ).limit(limit)
+        fallback_cursor = (
+            self._bairros.find(fallback_query, projection)
+            .collation(self._PT_COLLATION)
+            .sort([("bairro", 1), ("nm_bairro", 1), ("nome_area", 1)])
+            .limit(limit)
+        )
         return await fallback_cursor.to_list(length=limit)

@@ -1,4 +1,3 @@
-from dataclasses import asdict
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -99,7 +98,9 @@ class SchoolSearchSchema(BaseModel):
                 "sort": (
                     f"-{query_options.sort.field}"
                     if query_options.sort and query_options.sort.direction < 0
-                    else query_options.sort.field if query_options.sort else None
+                    else query_options.sort.field
+                    if query_options.sort
+                    else None
                 ),
                 "fields": query_options.fields,
                 "filters": [

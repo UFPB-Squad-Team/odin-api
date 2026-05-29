@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from typing import Generic, TypeVar, List, Optional
 from math import ceil
+from typing import Generic, List, Optional, TypeVar
 
 # This TypeVar ("T") allows our class to be generic.
 # It can be a "page of Schools", "page of Students", etc.

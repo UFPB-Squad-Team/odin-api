@@ -19,12 +19,18 @@ class MongoNeighborhoodMapper:
             return None
 
     @staticmethod
-    def _pick_nested(doc: dict[str, Any], *paths: tuple[str, ...], default: Any = None) -> Any:
+    def _pick_nested(
+        doc: dict[str, Any], *paths: tuple[str, ...], default: Any = None
+    ) -> Any:
         for path in paths:
             current: Any = doc
             found = True
             for key in path:
-                if isinstance(current, dict) and key in current and current[key] is not None:
+                if (
+                    isinstance(current, dict)
+                    and key in current
+                    and current[key] is not None
+                ):
                     current = current[key]
                 else:
                     found = False
@@ -50,7 +56,10 @@ class MongoNeighborhoodMapper:
         if isinstance(centroid, dict):
             coordinates = centroid.get("coordinates")
             if coordinates is not None:
-                return {"type": centroid.get("type", "Point"), "coordinates": coordinates}
+                return {
+                    "type": centroid.get("type", "Point"),
+                    "coordinates": coordinates,
+                }
 
         lon = cls._as_float(cls._pick(doc, "longitude", "lon", "avg_lon"))
         lat = cls._as_float(cls._pick(doc, "latitude", "lat", "avg_lat"))
@@ -96,11 +105,19 @@ class MongoNeighborhoodMapper:
 
         geometry = cls._extract_geometry(doc) if include_geometria else None
 
-        tem_oficial = bool(cls._pick(doc, "tem_bairro_official", "tem_bairro_oficial", default=True))
+        tem_oficial = bool(
+            cls._pick(doc, "tem_bairro_official", "tem_bairro_oficial", default=True)
+        )
         nivel = "setor" if source == "setor_indicadores" else "bairro"
 
-        socioeconomico = doc.get("socioeconomico") if isinstance(doc.get("socioeconomico"), dict) else None
-        educacao = doc.get("educacao") if isinstance(doc.get("educacao"), dict) else None
+        socioeconomico = (
+            doc.get("socioeconomico")
+            if isinstance(doc.get("socioeconomico"), dict)
+            else None
+        )
+        educacao = (
+            doc.get("educacao") if isinstance(doc.get("educacao"), dict) else None
+        )
 
         total_escolas = int(
             cls._pick_nested(

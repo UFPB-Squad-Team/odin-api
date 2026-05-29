@@ -30,9 +30,13 @@ class UniversalSearchUseCase:
             tasks.append(asyncio.create_task(self._search_cep(dto, source_limit)))
         else:
             tasks.append(asyncio.create_task(self._search_schools(dto, source_limit)))
-            tasks.append(asyncio.create_task(self._search_logradouros(dto, source_limit)))
+            tasks.append(
+                asyncio.create_task(self._search_logradouros(dto, source_limit))
+            )
             tasks.append(asyncio.create_task(self._search_bairros(dto, source_limit)))
-            tasks.append(asyncio.create_task(self._search_municipios(dto, source_limit)))
+            tasks.append(
+                asyncio.create_task(self._search_municipios(dto, source_limit))
+            )
             if any(char.isdigit() for char in query):
                 tasks.append(asyncio.create_task(self._search_cep(dto, source_limit)))
 
@@ -72,7 +76,9 @@ class UniversalSearchUseCase:
             municipio_id=dto.municipio_id,
             limit=limit,
         )
-        return [item for doc in docs if (item := self._build_school_item(doc)) is not None]
+        return [
+            item for doc in docs if (item := self._build_school_item(doc)) is not None
+        ]
 
     async def _search_logradouros(
         self,
@@ -85,7 +91,11 @@ class UniversalSearchUseCase:
             municipio_id=dto.municipio_id,
             limit=limit,
         )
-        return [item for doc in docs if (item := self._build_logradouro_item(doc)) is not None]
+        return [
+            item
+            for doc in docs
+            if (item := self._build_logradouro_item(doc)) is not None
+        ]
 
     async def _search_cep(
         self,
@@ -110,7 +120,11 @@ class UniversalSearchUseCase:
             sg_uf=dto.sg_uf,
             limit=limit,
         )
-        return [item for doc in docs if (item := self._build_municipio_item(doc)) is not None]
+        return [
+            item
+            for doc in docs
+            if (item := self._build_municipio_item(doc)) is not None
+        ]
 
     async def _search_bairros(
         self,
@@ -123,12 +137,16 @@ class UniversalSearchUseCase:
             municipio_id=dto.municipio_id,
             limit=limit,
         )
-        return [item for doc in docs if (item := self._build_bairro_item(doc)) is not None]
+        return [
+            item for doc in docs if (item := self._build_bairro_item(doc)) is not None
+        ]
 
     @staticmethod
     def _normalize_text(value: str) -> str:
         normalized = unicodedata.normalize("NFKD", value)
-        without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
+        without_accents = "".join(
+            char for char in normalized if not unicodedata.combining(char)
+        )
         return re.sub(r"\s+", " ", without_accents).casefold().strip()
 
     def _match_strength(self, item: SearchResultItem, normalized_query: str) -> int:
@@ -157,7 +175,9 @@ class UniversalSearchUseCase:
             "cep": 1,
         }.get(kind, 0)
 
-    def _ranking_key(self, item: SearchResultItem, normalized_query: str) -> tuple[int, int, int]:
+    def _ranking_key(
+        self, item: SearchResultItem, normalized_query: str
+    ) -> tuple[int, int, int]:
         return (
             self._match_strength(item, normalized_query),
             self._kind_priority(item.kind),
@@ -172,7 +192,9 @@ class UniversalSearchUseCase:
         return default
 
     @classmethod
-    def _pick_nested(cls, doc: dict[str, Any], path: tuple[str, ...], default: Any = None) -> Any:
+    def _pick_nested(
+        cls, doc: dict[str, Any], path: tuple[str, ...], default: Any = None
+    ) -> Any:
         current: Any = doc
         for key in path:
             if not isinstance(current, dict):
@@ -243,7 +265,9 @@ class UniversalSearchUseCase:
     @staticmethod
     def _slugify(value: str) -> str:
         normalized = unicodedata.normalize("NFKD", value)
-        without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
+        without_accents = "".join(
+            char for char in normalized if not unicodedata.combining(char)
+        )
         slug = re.sub(r"[^a-zA-Z0-9]+", "-", without_accents).strip("-").lower()
         return slug or "item"
 
@@ -263,7 +287,11 @@ class UniversalSearchUseCase:
             "o": "oOóÓòÒôÔõÕöÖ",
             "u": "uUúÚùÙûÛüÜ",
         }
-        return f"[{re.escape(variants[char.lower()])}]" if char.lower() in variants else re.escape(char)
+        return (
+            f"[{re.escape(variants[char.lower()])}]"
+            if char.lower() in variants
+            else re.escape(char)
+        )
 
     @classmethod
     def _accent_insensitive_pattern(cls, value: str) -> str:
@@ -279,10 +307,20 @@ class UniversalSearchUseCase:
         school_id = cls._pick(doc, "escolaIdInep", "escola_id_inep", "id", "_id")
         label = cls._as_str(cls._pick(doc, "escolaNome", "escola_nome"))
         municipio_id = cls._as_str(
-            cls._pick(doc, "municipioIdIbge", "municipio_id_ibge", "co_municipio", "idIbge")
+            cls._pick(
+                doc, "municipioIdIbge", "municipio_id_ibge", "co_municipio", "idIbge"
+            )
         )
-        municipio_nome = cls._as_str(cls._pick(doc, "municipioNome", "municipio_nome", "municipio", "nm_municipio"))
-        bairro = cls._as_str(cls._pick_nested(doc, ("endereco", "bairro"), default=cls._pick(doc, "bairro")))
+        municipio_nome = cls._as_str(
+            cls._pick(
+                doc, "municipioNome", "municipio_nome", "municipio", "nm_municipio"
+            )
+        )
+        bairro = cls._as_str(
+            cls._pick_nested(
+                doc, ("endereco", "bairro"), default=cls._pick(doc, "bairro")
+            )
+        )
 
         subtitle_parts = [part for part in [municipio_nome, bairro] if part]
         subtitle = " • ".join(subtitle_parts)
@@ -298,7 +336,9 @@ class UniversalSearchUseCase:
                 "bairro": bairro,
                 "municipioNome": municipio_nome,
                 "dependenciaAdm": cls._pick(doc, "dependenciaAdm", "dependencia_adm"),
-                "tipoLocalizacao": cls._pick(doc, "tipoLocalizacao", "tipo_localizacao"),
+                "tipoLocalizacao": cls._pick(
+                    doc, "tipoLocalizacao", "tipo_localizacao"
+                ),
             },
         )
 
@@ -309,12 +349,24 @@ class UniversalSearchUseCase:
             return None
 
         logradouro = cls._as_str(cls._pick(doc, "logradouro", "endereco.logradouro"))
-        municipio_id = cls._as_str(cls._pick(doc, "municipioIdIbge", "municipio_id_ibge", "co_municipio", "idIbge"))
-        municipio_nome = cls._as_str(cls._pick(doc, "municipioNome", "municipio_nome", "municipio", "nm_municipio"))
+        municipio_id = cls._as_str(
+            cls._pick(
+                doc, "municipioIdIbge", "municipio_id_ibge", "co_municipio", "idIbge"
+            )
+        )
+        municipio_nome = cls._as_str(
+            cls._pick(
+                doc, "municipioNome", "municipio_nome", "municipio", "nm_municipio"
+            )
+        )
         bairros = doc.get("bairros") if isinstance(doc.get("bairros"), list) else []
         count = cls._pick(doc, "count", default=0)
 
-        subtitle_parts = [part for part in [municipio_nome, f"{count} escolas" if count else ""] if part]
+        subtitle_parts = [
+            part
+            for part in [municipio_nome, f"{count} escolas" if count else ""]
+            if part
+        ]
         subtitle = " • ".join(subtitle_parts)
 
         return SearchResultItem(
@@ -337,8 +389,16 @@ class UniversalSearchUseCase:
             return None
 
         cep = cls._as_str(cls._pick(doc, "cep", "_id"))
-        municipio_id = cls._as_str(cls._pick(doc, "municipioIdIbge", "municipio_id_ibge", "co_municipio", "idIbge"))
-        municipio_nome = cls._as_str(cls._pick(doc, "municipioNome", "municipio_nome", "municipio", "nm_municipio"))
+        municipio_id = cls._as_str(
+            cls._pick(
+                doc, "municipioIdIbge", "municipio_id_ibge", "co_municipio", "idIbge"
+            )
+        )
+        municipio_nome = cls._as_str(
+            cls._pick(
+                doc, "municipioNome", "municipio_nome", "municipio", "nm_municipio"
+            )
+        )
         logradouro = cls._as_str(cls._pick(doc, "logradouro", "endereco.logradouro"))
         bairro = cls._as_str(cls._pick(doc, "bairro", "endereco.bairro"))
         count = cls._pick(doc, "count", default=0)
@@ -367,12 +427,27 @@ class UniversalSearchUseCase:
         if coordinates is None:
             return None
 
-        municipio_id = cls._as_str(cls._pick(doc, "co_municipio", "municipioIdIbge", "municipio_id_ibge", "idIbge"))
-        municipio_nome = cls._as_str(cls._pick(doc, "municipio", "nm_municipio", "municipioNome", "municipio_nome"))
+        municipio_id = cls._as_str(
+            cls._pick(
+                doc, "co_municipio", "municipioIdIbge", "municipio_id_ibge", "idIbge"
+            )
+        )
+        municipio_nome = cls._as_str(
+            cls._pick(
+                doc, "municipio", "nm_municipio", "municipioNome", "municipio_nome"
+            )
+        )
         uf = cls._as_str(cls._pick(doc, "sg_uf", "uf", "estadoSigla", "estado_sigla"))
         population = cls._pick_nested(doc, ("socioeconomico", "populacao", "total"))
 
-        subtitle_parts = [part for part in [uf, f"População: {population}" if population is not None else ""] if part]
+        subtitle_parts = [
+            part
+            for part in [
+                uf,
+                f"População: {population}" if population is not None else "",
+            ]
+            if part
+        ]
         subtitle = " • ".join(subtitle_parts)
 
         return SearchResultItem(
@@ -394,9 +469,21 @@ class UniversalSearchUseCase:
         if coordinates is None:
             return None
 
-        bairro = cls._as_str(cls._pick(doc, "bairro", "bairro_oficial", "nm_bairro", "nome_area", "situacao"))
-        municipio_id = cls._as_str(cls._pick(doc, "municipioIdIbge", "municipio_id_ibge", "co_municipio", "idIbge"))
-        municipio_nome = cls._as_str(cls._pick(doc, "municipio", "nm_municipio", "municipioNome", "municipio_nome"))
+        bairro = cls._as_str(
+            cls._pick(
+                doc, "bairro", "bairro_oficial", "nm_bairro", "nome_area", "situacao"
+            )
+        )
+        municipio_id = cls._as_str(
+            cls._pick(
+                doc, "municipioIdIbge", "municipio_id_ibge", "co_municipio", "idIbge"
+            )
+        )
+        municipio_nome = cls._as_str(
+            cls._pick(
+                doc, "municipio", "nm_municipio", "municipioNome", "municipio_nome"
+            )
+        )
         bairro_code = cls._pick(doc, "cd_bairro_ibge", "cd_bairro")
 
         subtitle = " • ".join([part for part in [municipio_nome, municipio_id] if part])

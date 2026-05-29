@@ -1,6 +1,8 @@
 from typing import List, Optional
+
 from src.domain.entities.state import State
 from src.domain.repository.state_repository import IStateRepository
+
 
 class ListStatesUseCase:
     def __init__(self, state_repository: IStateRepository):

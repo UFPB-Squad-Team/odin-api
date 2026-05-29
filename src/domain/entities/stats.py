@@ -1,5 +1,7 @@
+from typing import Any, Dict
+
 from pydantic import BaseModel
-from typing import Dict, Any
+
 
 class SummaryStats(BaseModel):
     total_escolas: int
@@ -18,5 +20,5 @@ class SummaryStats(BaseModel):
             total_municipios=data.get("total_municipios", 0),
             indicadores_infra=data.get("indicadores_infra", {}),
             por_dependencia=data.get("por_dependencia", {}),
-            por_zona=data.get("por_zona", {})
+            por_zona=data.get("por_zona", {}),
         )

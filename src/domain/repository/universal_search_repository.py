@@ -11,8 +11,7 @@ class IUniversalSearchRepository(ABC):
         sg_uf: Optional[str] = None,
         municipio_id: Optional[str] = None,
         limit: int = 8,
-    ) -> list[dict[str, Any]]:
-        ...
+    ) -> list[dict[str, Any]]: ...
 
     @abstractmethod
     async def search_logradouros(
@@ -22,8 +21,7 @@ class IUniversalSearchRepository(ABC):
         sg_uf: Optional[str] = None,
         municipio_id: Optional[str] = None,
         limit: int = 8,
-    ) -> list[dict[str, Any]]:
-        ...
+    ) -> list[dict[str, Any]]: ...
 
     @abstractmethod
     async def search_by_cep(
@@ -33,8 +31,7 @@ class IUniversalSearchRepository(ABC):
         sg_uf: Optional[str] = None,
         municipio_id: Optional[str] = None,
         limit: int = 8,
-    ) -> list[dict[str, Any]]:
-        ...
+    ) -> list[dict[str, Any]]: ...
 
     @abstractmethod
     async def search_municipios(
@@ -43,8 +40,7 @@ class IUniversalSearchRepository(ABC):
         *,
         sg_uf: Optional[str] = None,
         limit: int = 8,
-    ) -> list[dict[str, Any]]:
-        ...
+    ) -> list[dict[str, Any]]: ...
 
     @abstractmethod
     async def search_bairros(
@@ -54,5 +50,4 @@ class IUniversalSearchRepository(ABC):
         sg_uf: Optional[str] = None,
         municipio_id: Optional[str] = None,
         limit: int = 8,
-    ) -> list[dict[str, Any]]:
-        ...
+    ) -> list[dict[str, Any]]: ...

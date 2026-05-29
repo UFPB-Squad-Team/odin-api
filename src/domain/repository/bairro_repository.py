@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+
 from src.domain.entities.bairro import BairroResumo
+
 
 class IBairroRepository(ABC):
     @abstractmethod

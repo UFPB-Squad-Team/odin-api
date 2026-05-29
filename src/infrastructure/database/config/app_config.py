@@ -1,39 +1,61 @@
-import os
-from dataclasses import dataclass
-from dotenv import load_dotenv
+"""
+Application configuration using pydantic-settings.
+Loads from environment variables with validation and type coercion.
+"""
+
+from pydantic import field_validator
+from pydantic_settings import BaseSettings
 
 
-load_dotenv()
+class AppConfig(BaseSettings):
+    """Application settings loaded from environment variables."""
+
+    # Server
+    port: int = 8000
+    environment: str = "development"
+    log_level: str = "info"
+
+    # Database
+    mongo_uri: str
+    database_name: str
+
+    # Pagination
+    max_page_size: int = 100
+    max_offset_records: int = 50000
+    use_estimated_total_for_unfiltered_lists: bool = True
+
+    # CORS
+    cors_allowed_origins: str = "http://localhost:3000"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Parse comma-separated CORS origins."""
+        return [
+            origin.strip()
+            for origin in self.cors_allowed_origins.split(",")
+            if origin.strip()
+        ]
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment == "production"
+
+    @field_validator("environment")
+    @classmethod
+    def validate_environment(cls, v: str) -> str:
+        allowed = {"development", "staging", "production"}
+        if v not in allowed:
+            raise ValueError(f"ENVIRONMENT must be one of {allowed}, got '{v}'")
+        return v
+
+    model_config = {
+        "env_prefix": "",
+        "case_sensitive": False,
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+    }
 
 
-def _required_env(name: str) -> str:
-    value = os.getenv(name)
-    if value:
-        return value
-    raise ValueError(f"Missing required environment variable: {name}")
-
-
-def _parse_cors_origins(raw: str) -> list[str]:
-    """Parse a comma-separated list of CORS origins."""
-    return [origin.strip() for origin in raw.split(",") if origin.strip()]
-
-
-@dataclass
-class AppConfig:
-    port: int = int(os.getenv("PORT", "8000"))
-    environment: str = os.getenv("ENVIRONMENT", "development")
-    mongo_uri: str = _required_env("MONGO_URI")
-    database_name: str = _required_env("DATABASE_NAME")
-    max_page_size: int = int(os.getenv("MAX_PAGE_SIZE", "100"))
-    max_offset_records: int = int(os.getenv("MAX_OFFSET_RECORDS", "50000"))
-    use_estimated_total_for_unfiltered_lists: bool = (
-        os.getenv("USE_ESTIMATED_TOTAL", "true").lower() == "true"
-    )
-    cors_origins: list[str] = None  # type: ignore[assignment]
-
-    def __post_init__(self):
-        raw = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
-        self.cors_origins = _parse_cors_origins(raw)
-
-
+# Singleton config instance
 config = AppConfig()

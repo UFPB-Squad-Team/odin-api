@@ -1,22 +1,22 @@
 from uuid import uuid4
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from src.domain.value_objects.endereco import Endereco
+from src.domain.value_objects.indicators import Indicadores, Matriculas
+from src.domain.value_objects.infraestrutura import Infraestrutura
+from src.domain.value_objects.location import Location
+
 from ..enums.enum_dependencia_administrativa import DependenciaAdministrativa
-from ..enums.enum_uf import UF
 from ..enums.enum_tipo_localizacao import TipoLocalizacao
+from ..enums.enum_uf import UF
 from ..validators.school_validation import (
     SchoolValidator,
 )
-from src.domain.value_objects.location import Location
-from src.domain.value_objects.indicators import Indicadores, Matriculas
-from src.domain.value_objects.infraestrutura import Infraestrutura
-from src.domain.value_objects.endereco import Endereco
 
 
 class School(BaseModel):
-    model_config = ConfigDict(
-        from_attributes=True, 
-        arbitrary_types_allowed=True
-    )
+    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
     id: str = Field(default_factory=lambda: str(uuid4()))
     municipio_id_ibge: str

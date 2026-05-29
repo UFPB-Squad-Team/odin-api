@@ -16,7 +16,9 @@ from src.infrastructure.database.repository.mongo_territorial_aggregation_reposi
 )
 
 
-class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipioRepository):
+class MongoMunicipioRepository(
+    MongoTerritorialAggregationRepository, IMunicipioRepository
+):
     def __init__(
         self,
         municipio_collection: Any,
@@ -57,13 +59,12 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
             "estadoSigla": 1,
         }
 
-        docs = await self.municipio_collection.find(query, projection).to_list(length=None)
+        docs = await self.municipio_collection.find(query, projection).to_list(
+            length=None
+        )
         items = [
             item
-            for item in (
-                self._map_municipio_catalog_item(doc)
-                for doc in docs
-            )
+            for item in (self._map_municipio_catalog_item(doc) for doc in docs)
             if item is not None
         ]
 
@@ -117,7 +118,9 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
             }
         )
 
-    async def _find_primary_municipio_doc(self, municipio_id_ibge: str) -> dict[str, Any] | None:
+    async def _find_primary_municipio_doc(
+        self, municipio_id_ibge: str
+    ) -> dict[str, Any] | None:
         candidates: list[Any] = [municipio_id_ibge]
         if municipio_id_ibge.isdigit():
             candidates.append(int(municipio_id_ibge))
@@ -169,7 +172,9 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
                 "co_municipio",
                 "idIbge",
             ):
-                doc = await self.municipio_collection.find_one({field: candidate}, projection)
+                doc = await self.municipio_collection.find_one(
+                    {field: candidate}, projection
+                )
                 if doc:
                     return doc
 
@@ -194,18 +199,10 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
             return 0
 
         name_query = {
-            "$or": [
-                {"municipio": candidate} for candidate in name_candidates
-            ]
-            + [
-                {"nm_municipio": candidate} for candidate in name_candidates
-            ]
-            + [
-                {"municipio_nome": candidate} for candidate in name_candidates
-            ]
-            + [
-                {"municipioNome": candidate} for candidate in name_candidates
-            ]
+            "$or": [{"municipio": candidate} for candidate in name_candidates]
+            + [{"nm_municipio": candidate} for candidate in name_candidates]
+            + [{"municipio_nome": candidate} for candidate in name_candidates]
+            + [{"municipioNome": candidate} for candidate in name_candidates]
         }
         return await self.bairro_collection.count_documents(name_query)
 
@@ -221,14 +218,20 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
             include_geometria=False,
         )
 
-        educacao_doc = doc.get("educacao") if isinstance(doc.get("educacao"), dict) else {}
+        educacao_doc = (
+            doc.get("educacao") if isinstance(doc.get("educacao"), dict) else {}
+        )
         educacao_payload: dict[str, Any] = dict(educacao_doc) if educacao_doc else {}
         educacao_payload.setdefault("totalEscolas", city.total_escolas)
         educacao_payload.setdefault("totalMatriculas", city.total_alunos)
         educacao_payload.setdefault("pctComBiblioteca", city.pct_com_biblioteca)
         educacao_payload.setdefault("pctComInternet", city.pct_com_internet)
-        educacao_payload.setdefault("pctComLabInformatica", city.pct_com_lab_informatica)
-        educacao_payload.setdefault("pctComLaboratorioInformatica", city.pct_com_lab_informatica)
+        educacao_payload.setdefault(
+            "pctComLabInformatica", city.pct_com_lab_informatica
+        )
+        educacao_payload.setdefault(
+            "pctComLaboratorioInformatica", city.pct_com_lab_informatica
+        )
         educacao_payload.setdefault("pctSemAcessibilidade", city.pct_sem_acessibilidade)
         educacao_payload.setdefault(
             "mediaIdebAnosIniciais",
@@ -261,24 +264,31 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
         educacao = EducacaoStats.model_validate(educacao_payload)
 
         socioeconomico_doc = (
-            doc.get("socioeconomico") if isinstance(doc.get("socioeconomico"), dict) else {}
+            doc.get("socioeconomico")
+            if isinstance(doc.get("socioeconomico"), dict)
+            else {}
         )
-        socioeconomico_payload: dict[str, Any] = dict(socioeconomico_doc) if socioeconomico_doc else {}
+        socioeconomico_payload: dict[str, Any] = (
+            dict(socioeconomico_doc) if socioeconomico_doc else {}
+        )
         socioeconomico = SocioeconomicoStats.model_validate(socioeconomico_payload)
 
-        total_bairros = TerritorialAggregationMapper._as_int(
-            TerritorialAggregationMapper._pick_nested(
-                doc,
-                ("educacao", "totalBairros"),
-                ("educacao", "total_bairros"),
-                default=TerritorialAggregationMapper._pick(
+        total_bairros = (
+            TerritorialAggregationMapper._as_int(
+                TerritorialAggregationMapper._pick_nested(
                     doc,
-                    "totalBairros",
-                    "total_bairros",
-                    default=0,
-                ),
+                    ("educacao", "totalBairros"),
+                    ("educacao", "total_bairros"),
+                    default=TerritorialAggregationMapper._pick(
+                        doc,
+                        "totalBairros",
+                        "total_bairros",
+                        default=0,
+                    ),
+                )
             )
-        ) or 0
+            or 0
+        )
 
         return MunicipioResumo(
             municipioIdIbge=city.co_municipio,
@@ -298,18 +308,10 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
             candidates.append(int(municipio_id_ibge))
 
         return {
-            "$or": [
-                {"municipioIdIbge": candidate} for candidate in candidates
-            ]
-            + [
-                {"municipio_id_ibge": candidate} for candidate in candidates
-            ]
-            + [
-                {"co_municipio": candidate} for candidate in candidates
-            ]
-            + [
-                {"idIbge": candidate} for candidate in candidates
-            ]
+            "$or": [{"municipioIdIbge": candidate} for candidate in candidates]
+            + [{"municipio_id_ibge": candidate} for candidate in candidates]
+            + [{"co_municipio": candidate} for candidate in candidates]
+            + [{"idIbge": candidate} for candidate in candidates]
         }
 
     @staticmethod
@@ -333,4 +335,6 @@ class MongoMunicipioRepository(MongoTerritorialAggregationRepository, IMunicipio
         if not value:
             return ""
         normalized = unicodedata.normalize("NFKD", value)
-        return "".join(char for char in normalized if not unicodedata.combining(char)).casefold()
+        return "".join(
+            char for char in normalized if not unicodedata.combining(char)
+        ).casefold()

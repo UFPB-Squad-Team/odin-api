@@ -1,24 +1,25 @@
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from src.domain.entities.school import School
-from src.domain.value_objects.location import Location
+from src.domain.value_objects.endereco import Endereco
 from src.domain.value_objects.indicators import Indicadores, Matriculas
 from src.domain.value_objects.infraestrutura import Infraestrutura
-from src.domain.value_objects.endereco import Endereco
+from src.domain.value_objects.location import Location
 
 MONGO_TO_DOMAIN_MAP = {
-    '_id': 'id',
-    'municipioIdIbge': 'municipio_id_ibge',
-    'escolaIdInep': 'escola_id_inep',
-    'escolaNome': 'escola_nome',
-    'municipioNome': 'municipio_nome',
-    'estadoSigla': 'estado_sigla',
-    'dependenciaAdm': 'dependencia_adm',
-    'tipoLocalizacao': 'tipo_localizacao',
-    'localizacao': 'localizacao',
-    'endereco': 'endereco',
-    'indicadores': 'indicadores',
-    'matriculas': 'matriculas',
-    'infraestrutura': 'infraestrutura',
+    "_id": "id",
+    "municipioIdIbge": "municipio_id_ibge",
+    "escolaIdInep": "escola_id_inep",
+    "escolaNome": "escola_nome",
+    "municipioNome": "municipio_nome",
+    "estadoSigla": "estado_sigla",
+    "dependenciaAdm": "dependencia_adm",
+    "tipoLocalizacao": "tipo_localizacao",
+    "localizacao": "localizacao",
+    "endereco": "endereco",
+    "indicadores": "indicadores",
+    "matriculas": "matriculas",
+    "infraestrutura": "infraestrutura",
 }
 
 
@@ -31,22 +32,22 @@ class MongoSchoolMapper:
             if mongo_key in school_doc:
                 domain_data[domain_key] = school_doc[mongo_key]
 
-        if 'id' in domain_data:
-            domain_data['id'] = str(domain_data['id'])
-
-        if ('municipio_id_ibge' in domain_data
-                and domain_data['municipio_id_ibge'] is not None):
-            domain_data['municipio_id_ibge'] = str(
-                domain_data['municipio_id_ibge']
-            )
+        if "id" in domain_data:
+            domain_data["id"] = str(domain_data["id"])
 
         if (
-            'escola_id_inep' in domain_data
-            and domain_data['escola_id_inep'] is not None
+            "municipio_id_ibge" in domain_data
+            and domain_data["municipio_id_ibge"] is not None
+        ):
+            domain_data["municipio_id_ibge"] = str(domain_data["municipio_id_ibge"])
+
+        if (
+            "escola_id_inep" in domain_data
+            and domain_data["escola_id_inep"] is not None
         ):
             try:
-                _escola_id = domain_data['escola_id_inep']
-                domain_data['escola_id_inep'] = int(_escola_id)
+                _escola_id = domain_data["escola_id_inep"]
+                domain_data["escola_id_inep"] = int(_escola_id)
             except ValueError as e:
                 msg = (
                     "Não foi possível converter escola_id_inep para inteiro. "
@@ -54,37 +55,30 @@ class MongoSchoolMapper:
                 )
                 raise ValueError(msg)
 
-        if (
-            'localizacao' in domain_data
-            and isinstance(domain_data['localizacao'], dict)
+        if "localizacao" in domain_data and isinstance(
+            domain_data["localizacao"], dict
         ):
-            domain_data['localizacao'] = Location(**domain_data['localizacao'])
+            domain_data["localizacao"] = Location(**domain_data["localizacao"])
 
-        if (
-        'indicadores' in domain_data 
-        and isinstance(domain_data['indicadores'], dict)
+        if "indicadores" in domain_data and isinstance(
+            domain_data["indicadores"], dict
         ):
-            indicadores_data = domain_data['indicadores']
-            
-            domain_data['indicadores'] = Indicadores(**indicadores_data)
+            indicadores_data = domain_data["indicadores"]
 
-        if (
-            'matriculas' in domain_data
-            and isinstance(domain_data['matriculas'], dict)
-        ):
-            domain_data['matriculas'] = Matriculas(**domain_data['matriculas'])
+            domain_data["indicadores"] = Indicadores(**indicadores_data)
 
-        if (
-            'endereco' in domain_data
-            and isinstance(domain_data['endereco'], dict)
-        ):
-            domain_data['endereco'] = Endereco(**domain_data['endereco'])
+        if "matriculas" in domain_data and isinstance(domain_data["matriculas"], dict):
+            domain_data["matriculas"] = Matriculas(**domain_data["matriculas"])
 
-        if (
-            'infraestrutura' in domain_data
-            and isinstance(domain_data['infraestrutura'], dict)
+        if "endereco" in domain_data and isinstance(domain_data["endereco"], dict):
+            domain_data["endereco"] = Endereco(**domain_data["endereco"])
+
+        if "infraestrutura" in domain_data and isinstance(
+            domain_data["infraestrutura"], dict
         ):
-            domain_data['infraestrutura'] = Infraestrutura(**domain_data['infraestrutura'])
+            domain_data["infraestrutura"] = Infraestrutura(
+                **domain_data["infraestrutura"]
+            )
 
         return School(**domain_data)
 

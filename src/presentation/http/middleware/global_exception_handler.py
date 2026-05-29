@@ -37,7 +37,9 @@ async def _request_validation_exception_handler(
 ) -> JSONResponse:
     return JSONResponse(
         status_code=422,
-        content=_build_error_payload("VALIDATION_ERROR", "Invalid request payload", exc.errors()),
+        content=_build_error_payload(
+            "VALIDATION_ERROR", "Invalid request payload", exc.errors()
+        ),
     )
 
 
@@ -72,14 +74,20 @@ async def _value_error_handler(_: Request, exc: ValueError) -> JSONResponse:
 async def _generic_exception_handler(_: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=500,
-        content=_build_error_payload("INTERNAL_SERVER_ERROR", "An unexpected error occurred", str(exc)),
+        content=_build_error_payload(
+            "INTERNAL_SERVER_ERROR", "An unexpected error occurred", str(exc)
+        ),
     )
 
 
 def register_global_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(HTTPException, _http_exception_handler)
-    app.add_exception_handler(RequestValidationError, _request_validation_exception_handler)
-    app.add_exception_handler(DomainValidationError, _domain_validation_exception_handler)
+    app.add_exception_handler(
+        RequestValidationError, _request_validation_exception_handler
+    )
+    app.add_exception_handler(
+        DomainValidationError, _domain_validation_exception_handler
+    )
     app.add_exception_handler(PyMongoError, _mongo_exception_handler)
     app.add_exception_handler(ValueError, _value_error_handler)
     app.add_exception_handler(Exception, _generic_exception_handler)

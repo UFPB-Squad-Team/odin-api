@@ -159,7 +159,9 @@ class SocioeconomicoStats(BaseModel):
 class MunicipioResumo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    municipioIdIbge: str = Field(..., description="IBGE municipality code as a 7-digit string")
+    municipioIdIbge: str = Field(
+        ..., description="IBGE municipality code as a 7-digit string"
+    )
     municipio: str = Field(default="", description="Municipality name")
     sg_uf: str | None = Field(default=None, description="State code")
     total_bairros: int = 0

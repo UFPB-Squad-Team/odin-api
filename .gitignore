@@ -1,2 +1,41 @@
-__pycache__
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.venv/
+
+# ─── Environment ──────────────────────────────────────────────────────────────
 .env
+.env.local
+.env.*.local
+
+# ─── Testing & Quality ────────────────────────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ─── IDE ──────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── uv ───────────────────────────────────────────────────────────────────────
+# Lock file should be committed for reproducible builds
+# .python-version is auto-generated
+.python-version

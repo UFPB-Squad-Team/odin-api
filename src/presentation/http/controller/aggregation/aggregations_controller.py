@@ -16,7 +16,6 @@ from src.presentation.http.schemas.aggregation_schema import (
     NeighborhoodAggregationFeatureCollection,
 )
 
-
 router = APIRouter()
 
 
@@ -89,8 +88,8 @@ def _to_neighborhood_feature_collection(
     tags=["aggregations"],
     summary="List or fetch city aggregations",
     description="Returns GeoJSON FeatureCollection with city-level aggregated indicators. "
-               "If municipioIdIbge is provided, returns data for that specific city with fallback to setor_indicadores. "
-               "If not provided, returns all cities from municipio_indicadores collection.",
+    "If municipioIdIbge is provided, returns data for that specific city with fallback to setor_indicadores. "
+    "If not provided, returns all cities from municipio_indicadores collection.",
 )
 async def get_city_aggregations(
     municipioIdIbge: str | None = Query(
@@ -120,7 +119,8 @@ async def get_city_aggregations(
 
 @router.get(
     "/aggregations/neighborhoods",
-    response_model=list[MongoNeighborhoodAggregation] | NeighborhoodAggregationFeatureCollection,
+    response_model=list[MongoNeighborhoodAggregation]
+    | NeighborhoodAggregationFeatureCollection,
     tags=["aggregations"],
     summary="List neighborhoods by city",
     description=(

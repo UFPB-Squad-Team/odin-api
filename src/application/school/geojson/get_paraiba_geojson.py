@@ -8,4 +8,6 @@ class GetParaibaGeoJson:
         self.school_repository = school_repository
 
     async def execute(self, municipio_id: str | None = None) -> Dict[str, Any]:
-        return await self.school_repository.get_paraiba_geojson(municipio_id=municipio_id)
+        return await self.school_repository.get_paraiba_geojson(
+            municipio_id=municipio_id
+        )

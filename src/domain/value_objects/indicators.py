@@ -26,6 +26,10 @@ class Indicadores(BaseModel):
     totalAlunos: int = 0
 
     educacaoInfantil: DetalheEtapaEnsino = Field(default_factory=DetalheEtapaEnsino)
-    fundamentalAnosIniciais: DetalheEtapaEnsino = Field(default_factory=DetalheEtapaEnsino)
-    fundamentalAnosFinais: DetalheEtapaEnsino = Field(default_factory=DetalheEtapaEnsino)
+    fundamentalAnosIniciais: DetalheEtapaEnsino = Field(
+        default_factory=DetalheEtapaEnsino
+    )
+    fundamentalAnosFinais: DetalheEtapaEnsino = Field(
+        default_factory=DetalheEtapaEnsino
+    )
     ensinoMedio: DetalheEtapaEnsino = Field(default_factory=DetalheEtapaEnsino)

@@ -1,10 +1,16 @@
 from typing import List
-from src.domain.entities.state_summary import StateSummary, EducacaoStateStats, SocioeconomicoStateStats
+
 from src.domain.entities.city_aggregation import CityAggregation
+from src.domain.entities.state_summary import (
+    EducacaoStateStats,
+    SocioeconomicoStateStats,
+    StateSummary,
+)
+
 
 class StateSummaryFactory:
     """
-    Factory responsável por encapsular as regras de negócio e matemática 
+    Factory responsável por encapsular as regras de negócio e matemática
     para agregar os dados de vários municípios em um resumo estadual.
     """
 
@@ -22,7 +28,8 @@ class StateSummaryFactory:
         def _pct_weighted_by_schools(field: str) -> float | None:
             numerator = sum(
                 c.educacao.total_escolas * getattr(c.educacao, field)
-                for c in cities if c.educacao.total_escolas > 0
+                for c in cities
+                if c.educacao.total_escolas > 0
             )
             return cls._safe_div(numerator, total_escolas)
 
@@ -30,11 +37,13 @@ class StateSummaryFactory:
         def _avg_weighted_by_alunos(field: str) -> float | None:
             numerator = sum(
                 getattr(c.educacao, field) * c.educacao.total_alunos
-                for c in cities if getattr(c.educacao, field) > 0
+                for c in cities
+                if getattr(c.educacao, field) > 0
             )
             denominator = sum(
                 c.educacao.total_alunos
-                for c in cities if getattr(c.educacao, field) > 0
+                for c in cities
+                if getattr(c.educacao, field) > 0
             )
             return cls._safe_div(numerator, denominator)
 
@@ -50,7 +59,9 @@ class StateSummaryFactory:
             pct_sem_acessibilidade=_pct_weighted_by_schools("pct_sem_acessibilidade"),
             pct_com_agua_potavel=_pct_weighted_by_schools("pct_com_agua_potavel"),
             pct_com_energia_publica=_pct_weighted_by_schools("pct_com_energia_publica"),
-            pct_com_esgoto_rede_publica=_pct_weighted_by_schools("pct_com_esgoto_rede_publica"),
+            pct_com_esgoto_rede_publica=_pct_weighted_by_schools(
+                "pct_com_esgoto_rede_publica"
+            ),
             pct_com_coleta_lixo=_pct_weighted_by_schools("pct_com_coleta_lixo"),
             pct_com_quadra_esportes=_pct_weighted_by_schools("pct_com_quadra_esportes"),
             pct_com_cozinha=_pct_weighted_by_schools("pct_com_cozinha"),
@@ -76,9 +87,15 @@ class StateSummaryFactory:
             avg_taxa_abandono_af=_avg_weighted_by_alunos("media_taxa_abandono_af"),
             avg_taxa_abandono_em=_avg_weighted_by_alunos("media_taxa_abandono_em"),
             # Teachers with higher education (weighted by students)
-            avg_docentes_superior_ai=_avg_weighted_by_alunos("media_docentes_superior_ai"),
-            avg_docentes_superior_af=_avg_weighted_by_alunos("media_docentes_superior_af"),
-            avg_docentes_superior_em=_avg_weighted_by_alunos("media_docentes_superior_em"),
+            avg_docentes_superior_ai=_avg_weighted_by_alunos(
+                "media_docentes_superior_ai"
+            ),
+            avg_docentes_superior_af=_avg_weighted_by_alunos(
+                "media_docentes_superior_af"
+            ),
+            avg_docentes_superior_em=_avg_weighted_by_alunos(
+                "media_docentes_superior_em"
+            ),
             # Hours per day (weighted by students)
             avg_horas_aula_ai=_avg_weighted_by_alunos("media_horas_aula_ai"),
             avg_horas_aula_af=_avg_weighted_by_alunos("media_horas_aula_af"),
@@ -90,24 +107,31 @@ class StateSummaryFactory:
         )
 
     @classmethod
-    def _calc_socioeconomico(cls, cities: List[CityAggregation]) -> SocioeconomicoStateStats:
+    def _calc_socioeconomico(
+        cls, cities: List[CityAggregation]
+    ) -> SocioeconomicoStateStats:
         pop_total = sum(c.socioeconomico.populacao for c in cities)
-        
+
         soma_desemprego = sum(
-            c.socioeconomico.taxa_desemprego * c.socioeconomico.populacao 
-            for c in cities if c.socioeconomico.populacao > 0
+            c.socioeconomico.taxa_desemprego * c.socioeconomico.populacao
+            for c in cities
+            if c.socioeconomico.populacao > 0
         )
 
         return SocioeconomicoStateStats(
             populacao_total=pop_total,
-            indicadores={"taxa_desemprego_media": cls._safe_div(soma_desemprego, pop_total)}
+            indicadores={
+                "taxa_desemprego_media": cls._safe_div(soma_desemprego, pop_total)
+            },
         )
 
     @classmethod
-    def create_from_cities(cls, sg_uf: str, cities: List[CityAggregation]) -> StateSummary:
+    def create_from_cities(
+        cls, sg_uf: str, cities: List[CityAggregation]
+    ) -> StateSummary:
         """Método público que constrói o objeto final."""
         return StateSummary(
             sg_uf=sg_uf.upper(),
             educacao=cls._calc_educacao(cities),
-            socioeconomico=cls._calc_socioeconomico(cities)
+            socioeconomico=cls._calc_socioeconomico(cities),
         )
