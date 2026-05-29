@@ -1,14 +1,15 @@
-from ..container import container
-from src.application.school.list_all_schools.list_all_schools import (
-    ListAllSchools,
-)
+from src.application.school.geojson.get_bairro_by_school_id import GetBairroBySchoolId
+from src.application.school.geojson.get_bairros_geojson import GetBairrosGeoJson
+from src.application.school.geojson.get_paraiba_geojson import GetParaibaGeoJson
 from src.application.school.get_school_by_id.get_school_by_id import (
     GetSchoolById,
 )
-from src.application.school.geojson.get_paraiba_geojson import GetParaibaGeoJson
-from src.application.school.geojson.get_bairros_geojson import GetBairrosGeoJson
-from src.application.school.geojson.get_bairro_by_school_id import GetBairroBySchoolId
+from src.application.school.list_all_schools.list_all_schools import (
+    ListAllSchools,
+)
 from src.application.stats.get_summary_stats_use_case import GetSummaryStatsUseCase
+
+from ..container import container
 
 
 def get_list_all_schools_use_case() -> ListAllSchools:

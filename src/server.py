@@ -1,4 +1,5 @@
 import uvicorn
+
 from src.infrastructure.database.config.app_config import config
 
 

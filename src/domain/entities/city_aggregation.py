@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class CityEducacao(BaseModel):
     total_escolas: int
     total_alunos: int
@@ -41,9 +42,11 @@ class CityEducacao(BaseModel):
     media_alunos_turma_af: float = 0.0
     media_alunos_turma_em: float = 0.0
 
+
 class CitySocioeconomico(BaseModel):
     populacao: int
     taxa_desemprego: float
+
 
 class CityAggregation(BaseModel):
     educacao: CityEducacao

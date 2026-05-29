@@ -14,12 +14,20 @@ SCHOOL_QUERY_FIELDS = [
 
 SCHOOL_ALLOWED_FILTERS = {
     "id": AllowedFilter(caster=to_str, operators=["eq", "in"]),
-    "escola_id_inep": AllowedFilter(caster=to_int, operators=["eq", "gt", "gte", "lt", "lte", "in"]),
-    "escola_nome": AllowedFilter(caster=to_str, operators=["eq", "contains", "startswith", "endswith"]),
-    "municipio_nome": AllowedFilter(caster=to_str, operators=["eq", "contains", "startswith", "endswith"]),
+    "escola_id_inep": AllowedFilter(
+        caster=to_int, operators=["eq", "gt", "gte", "lt", "lte", "in"]
+    ),
+    "escola_nome": AllowedFilter(
+        caster=to_str, operators=["eq", "contains", "startswith", "endswith"]
+    ),
+    "municipio_nome": AllowedFilter(
+        caster=to_str, operators=["eq", "contains", "startswith", "endswith"]
+    ),
     "estado_sigla": AllowedFilter(caster=to_str, operators=["eq", "in"]),
     "dependencia_adm": AllowedFilter(caster=to_str, operators=["eq", "in"]),
     "tipo_localizacao": AllowedFilter(caster=to_str, operators=["eq", "in"]),
     "municipio_id_ibge": AllowedFilter(caster=to_str, operators=["eq", "in"]),
-    "bairro": AllowedFilter(caster=to_str, operators=["eq", "contains", "startswith", "endswith"]),
+    "bairro": AllowedFilter(
+        caster=to_str, operators=["eq", "contains", "startswith", "endswith"]
+    ),
 }

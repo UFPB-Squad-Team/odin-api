@@ -16,7 +16,6 @@ from src.presentation.http.controller.municipio.callable.municipio_callable impo
     get_municipio_resumo_use_case,
 )
 
-
 router = APIRouter()
 
 

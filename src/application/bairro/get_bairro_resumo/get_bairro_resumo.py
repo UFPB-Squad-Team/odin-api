@@ -1,6 +1,8 @@
-from .get_bairro_resumo_dto import GetBairroResumoDTO
 from src.domain.entities.bairro import BairroResumo
 from src.domain.repository.bairro_repository import IBairroRepository
+
+from .get_bairro_resumo_dto import GetBairroResumoDTO
+
 
 class GetBairroResumo:
     def __init__(self, bairro_repository: IBairroRepository):

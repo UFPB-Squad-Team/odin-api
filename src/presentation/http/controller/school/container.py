@@ -1,36 +1,35 @@
 from dependency_injector import containers, providers
-from src.infrastructure.database.repository import mongo_school_repository
-from src.infrastructure.database.config.connect_db import mongodb
-from src.application.school.list_all_schools.list_all_schools import ListAllSchools
-from src.application.school.get_school_by_id.get_school_by_id import GetSchoolById
-from src.application.school.geojson.get_paraiba_geojson import GetParaibaGeoJson
-from src.application.school.geojson.get_bairros_geojson import GetBairrosGeoJson
+
 from src.application.school.geojson.get_bairro_by_school_id import GetBairroBySchoolId
-from src.infrastructure.database.repository.mongo_stats_repository import MongoStatsRepository
+from src.application.school.geojson.get_bairros_geojson import GetBairrosGeoJson
+from src.application.school.geojson.get_paraiba_geojson import GetParaibaGeoJson
+from src.application.school.get_school_by_id.get_school_by_id import GetSchoolById
+from src.application.school.list_all_schools.list_all_schools import ListAllSchools
 from src.application.stats.get_summary_stats_use_case import GetSummaryStatsUseCase
+from src.infrastructure.database.config.connect_db import mongodb
+from src.infrastructure.database.repository import mongo_school_repository
+from src.infrastructure.database.repository.mongo_stats_repository import (
+    MongoStatsRepository,
+)
+
 
 class Container(containers.DeclarativeContainer):
-    
     school_repository = providers.Factory(
         mongo_school_repository.MongoSchoolRepository,
-        collection=providers.Callable(mongodb.get_collection, "escolas")
+        collection=providers.Callable(mongodb.get_collection, "escolas"),
     )
 
-    
     stats_repository = providers.Factory(
         MongoStatsRepository,
-        collection=providers.Callable(mongodb.get_collection, "escolas")
+        collection=providers.Callable(mongodb.get_collection, "escolas"),
     )
 
-    
     list_all_schools_use_case = providers.Singleton(
-        ListAllSchools,
-        school_repository=school_repository
+        ListAllSchools, school_repository=school_repository
     )
 
     get_school_by_id_use_case = providers.Singleton(
-        GetSchoolById,
-        school_repository=school_repository
+        GetSchoolById, school_repository=school_repository
     )
 
     get_paraiba_geojson_use_case = providers.Singleton(
@@ -48,11 +47,9 @@ class Container(containers.DeclarativeContainer):
         school_repository=school_repository,
     )
 
-
     get_summary_stats_use_case = providers.Singleton(
-        GetSummaryStatsUseCase,
-        repository=stats_repository
+        GetSummaryStatsUseCase, repository=stats_repository
     )
 
-container = Container()
 
+container = Container()

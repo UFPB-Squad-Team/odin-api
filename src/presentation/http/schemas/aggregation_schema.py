@@ -56,9 +56,11 @@ class SocioeconomicoEducacaoPopulacao(BaseModel):
 class SocioeconomicoFamilia(BaseModel):
     pctResponsavelFeminino: float | int | None = None
 
+
 class SocioeconomicoMortalidade(BaseModel):
     totalObitosDomicilios: float | int | None = None
     obitosInfantis0a4: float | int | None = None
+
 
 class SocioeconomicoHabitacao(BaseModel):
     pctDomImprovisado: float | int | None = None

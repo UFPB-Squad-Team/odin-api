@@ -76,7 +76,9 @@ class BaseMongoRepository(ABC, Generic[T]):
             has_more = len(documents) > limit
             page_docs = documents[:limit]
             next_cursor = (
-                self._encode_cursor(page_docs[-1], sort_field) if has_more and page_docs else None
+                self._encode_cursor(page_docs[-1], sort_field)
+                if has_more and page_docs
+                else None
             )
         else:
             cursor = cursor.skip((page - 1) * limit).limit(limit)
@@ -156,7 +158,9 @@ class BaseMongoRepository(ABC, Generic[T]):
         direction = -1 if query.sort.direction < 0 else 1
         return mongo_field, direction
 
-    def _build_projection(self, requested_fields: Optional[List[str]]) -> Optional[Dict[str, int]]:
+    def _build_projection(
+        self, requested_fields: Optional[List[str]]
+    ) -> Optional[Dict[str, int]]:
         if not requested_fields:
             return None
 
@@ -208,7 +212,9 @@ class BaseMongoRepository(ABC, Generic[T]):
             ]
         }
 
-    def _merge_queries(self, left: Dict[str, Any], right: Dict[str, Any]) -> Dict[str, Any]:
+    def _merge_queries(
+        self, left: Dict[str, Any], right: Dict[str, Any]
+    ) -> Dict[str, Any]:
         if not left:
             return right
         if not right:

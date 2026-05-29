@@ -1,5 +1,43 @@
-.venv
-__pycache__
-*.pyc
+# ─── Version Control ──────────────────────────────────────────────────────────
 .git
 .gitignore
+
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+.env
+*.egg-info
+dist
+build
+
+# ─── Testing & Quality ────────────────────────────────────────────────────────
+.pytest_cache
+.mypy_cache
+.ruff_cache
+htmlcov
+.coverage
+tests
+
+# ─── IDE ──────────────────────────────────────────────────────────────────────
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+Dockerfile
+docker-compose*.yml
+
+# ─── Documentation ────────────────────────────────────────────────────────────
+docs
+*.md
+!README.md
+
+# ─── Misc ─────────────────────────────────────────────────────────────────────
+.github
+Makefile
+poetry.lock

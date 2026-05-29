@@ -89,7 +89,8 @@ class MongoTerritorialAggregationRepository(
             return {
                 "type": "FeatureCollection",
                 "features": [
-                    TerritorialAggregationMapper.city_to_feature(city) for city in cities
+                    TerritorialAggregationMapper.city_to_feature(city)
+                    for city in cities
                 ],
             }
 
@@ -115,7 +116,9 @@ class MongoTerritorialAggregationRepository(
 
         return {
             "type": "FeatureCollection",
-            "features": [TerritorialAggregationMapper.city_to_feature(city) for city in cities],
+            "features": [
+                TerritorialAggregationMapper.city_to_feature(city) for city in cities
+            ],
         }
 
     async def get_by_municipio(
@@ -184,13 +187,12 @@ class MongoTerritorialAggregationRepository(
             "estadoSigla": 1,
         }
 
-        docs = await self.municipio_collection.find(query, projection).to_list(length=None)
+        docs = await self.municipio_collection.find(query, projection).to_list(
+            length=None
+        )
         items = [
             item
-            for item in (
-                self._map_municipio_catalog_item(doc)
-                for doc in docs
-            )
+            for item in (self._map_municipio_catalog_item(doc) for doc in docs)
             if item is not None
         ]
 
@@ -248,7 +250,9 @@ class MongoTerritorialAggregationRepository(
         if not value:
             return ""
         normalized = unicodedata.normalize("NFKD", value)
-        return "".join(char for char in normalized if not unicodedata.combining(char)).casefold()
+        return "".join(
+            char for char in normalized if not unicodedata.combining(char)
+        ).casefold()
 
     def _map_municipio_catalog_item(
         self,
@@ -301,17 +305,20 @@ class MongoTerritorialAggregationRepository(
         )
 
         total_matriculas = city.total_alunos
-        total_bairros = TerritorialAggregationMapper._as_int(
-            TerritorialAggregationMapper._pick(
-                doc,
-                "total_bairros",
-                "totalBairros",
-                default=TerritorialAggregationMapper._pick_nested(
+        total_bairros = (
+            TerritorialAggregationMapper._as_int(
+                TerritorialAggregationMapper._pick(
                     doc,
-                    ("educacao", "totalBairros"),
-                ),
+                    "total_bairros",
+                    "totalBairros",
+                    default=TerritorialAggregationMapper._pick_nested(
+                        doc,
+                        ("educacao", "totalBairros"),
+                    ),
+                )
             )
-        ) or 0
+            or 0
+        )
 
         return MunicipioResumo(
             municipioIdIbge=city.co_municipio,
@@ -442,9 +449,7 @@ class MongoTerritorialAggregationRepository(
             )
 
         pipeline = [
-            {
-                "$match": {"$and": match_conditions}
-            },
+            {"$match": {"$and": match_conditions}},
             {
                 "$project": {
                     "co_municipio": {"$ifNull": ["$co_municipio", "$municipioIdIbge"]},
@@ -456,7 +461,12 @@ class MongoTerritorialAggregationRepository(
                     "total_alunos": {
                         "$ifNull": [
                             "$total_alunos",
-                            {"$ifNull": ["$total_matriculas", {"$ifNull": ["$qtd_alunos", 0]}]},
+                            {
+                                "$ifNull": [
+                                    "$total_matriculas",
+                                    {"$ifNull": ["$qtd_alunos", 0]},
+                                ]
+                            },
                         ]
                     },
                     "avg_ideb": {"$ifNull": ["$avg_ideb", "$ideb"]},
@@ -476,8 +486,18 @@ class MongoTerritorialAggregationRepository(
                                     "$lon",
                                     {
                                         "$ifNull": [
-                                            {"$arrayElemAt": ["$centroide.coordinates", 0]},
-                                            {"$arrayElemAt": ["$geometria.coordinates.0.0.0", 0]},
+                                            {
+                                                "$arrayElemAt": [
+                                                    "$centroide.coordinates",
+                                                    0,
+                                                ]
+                                            },
+                                            {
+                                                "$arrayElemAt": [
+                                                    "$geometria.coordinates.0.0.0",
+                                                    0,
+                                                ]
+                                            },
                                         ]
                                     },
                                 ]
@@ -492,8 +512,18 @@ class MongoTerritorialAggregationRepository(
                                     "$lat",
                                     {
                                         "$ifNull": [
-                                            {"$arrayElemAt": ["$centroide.coordinates", 1]},
-                                            {"$arrayElemAt": ["$geometria.coordinates.0.0.0", 1]},
+                                            {
+                                                "$arrayElemAt": [
+                                                    "$centroide.coordinates",
+                                                    1,
+                                                ]
+                                            },
+                                            {
+                                                "$arrayElemAt": [
+                                                    "$geometria.coordinates.0.0.0",
+                                                    1,
+                                                ]
+                                            },
                                         ]
                                     },
                                 ]
@@ -586,7 +616,10 @@ class MongoTerritorialAggregationRepository(
                         ]
                     },
                     "tem_bairro_official": {
-                        "$ifNull": ["$tem_bairro_official", {"$ifNull": ["$tem_bairro_oficial", True]}]
+                        "$ifNull": [
+                            "$tem_bairro_official",
+                            {"$ifNull": ["$tem_bairro_oficial", True]},
+                        ]
                     },
                     "bairro_oficial": {"$ifNull": ["$bairro", "$nm_bairro"]},
                     "cd_setor": {
@@ -603,7 +636,12 @@ class MongoTerritorialAggregationRepository(
                             {
                                 "$ifNull": [
                                     "$qtd_escolas",
-                                    {"$ifNull": ["$educacao.totalEscolas", "$educacao.total_escolas"]},
+                                    {
+                                        "$ifNull": [
+                                            "$educacao.totalEscolas",
+                                            "$educacao.total_escolas",
+                                        ]
+                                    },
                                 ]
                             },
                         ]
@@ -631,27 +669,90 @@ class MongoTerritorialAggregationRepository(
                     },
                     "avg_ideb": {"$ifNull": ["$avg_ideb", "$ideb"]},
                     "pct_com_biblioteca": {
-                        "$ifNull": ["$pct_com_biblioteca", {"$ifNull": ["$educacao.pctComBiblioteca", "$educacao.pct_com_biblioteca"]}]
+                        "$ifNull": [
+                            "$pct_com_biblioteca",
+                            {
+                                "$ifNull": [
+                                    "$educacao.pctComBiblioteca",
+                                    "$educacao.pct_com_biblioteca",
+                                ]
+                            },
+                        ]
                     },
                     "pct_com_internet": {
-                        "$ifNull": ["$pct_com_internet", {"$ifNull": ["$educacao.pctComInternet", "$educacao.pct_com_internet"]}]
+                        "$ifNull": [
+                            "$pct_com_internet",
+                            {
+                                "$ifNull": [
+                                    "$educacao.pctComInternet",
+                                    "$educacao.pct_com_internet",
+                                ]
+                            },
+                        ]
                     },
                     "pct_com_internet_alunos": {
-                        "$ifNull": ["$pct_com_internet_alunos", {"$ifNull": ["$educacao.pctComInternetAlunos", "$educacao.pct_com_internet_alunos"]}]
+                        "$ifNull": [
+                            "$pct_com_internet_alunos",
+                            {
+                                "$ifNull": [
+                                    "$educacao.pctComInternetAlunos",
+                                    "$educacao.pct_com_internet_alunos",
+                                ]
+                            },
+                        ]
                     },
                     "pct_com_lab_informatica": {
-                        "$ifNull": ["$pct_com_lab_informatica", {"$ifNull": ["$educacao.pctComLaboratorioInformatica", {"$ifNull": ["$educacao.pctComLabInformatica", "$educacao.pct_com_lab_informatica"]}]}]
+                        "$ifNull": [
+                            "$pct_com_lab_informatica",
+                            {
+                                "$ifNull": [
+                                    "$educacao.pctComLaboratorioInformatica",
+                                    {
+                                        "$ifNull": [
+                                            "$educacao.pctComLabInformatica",
+                                            "$educacao.pct_com_lab_informatica",
+                                        ]
+                                    },
+                                ]
+                            },
+                        ]
                     },
                     "pct_com_lab_ciencias": {
-                        "$ifNull": ["$pct_com_lab_ciencias", {"$ifNull": ["$educacao.pctComLaboratorioCiencias", "$educacao.pct_com_lab_ciencias"]}]
+                        "$ifNull": [
+                            "$pct_com_lab_ciencias",
+                            {
+                                "$ifNull": [
+                                    "$educacao.pctComLaboratorioCiencias",
+                                    "$educacao.pct_com_lab_ciencias",
+                                ]
+                            },
+                        ]
                     },
                     "pct_sem_acessibilidade": {
-                        "$ifNull": ["$pct_sem_acessibilidade", {"$ifNull": ["$educacao.pctSemAcessibilidade", "$educacao.pct_sem_acessibilidade"]}]
+                        "$ifNull": [
+                            "$pct_sem_acessibilidade",
+                            {
+                                "$ifNull": [
+                                    "$educacao.pctSemAcessibilidade",
+                                    "$educacao.pct_sem_acessibilidade",
+                                ]
+                            },
+                        ]
                     },
                     "geometria": {
                         "$ifNull": [
                             "$geometria",
-                            {"$ifNull": ["$geometry", {"$ifNull": ["$centroide", {"$ifNull": ["$centroid", "$localizacao"]}]}]},
+                            {
+                                "$ifNull": [
+                                    "$geometry",
+                                    {
+                                        "$ifNull": [
+                                            "$centroide",
+                                            {"$ifNull": ["$centroid", "$localizacao"]},
+                                        ]
+                                    },
+                                ]
+                            },
                         ]
                     },
                     "socioeconomico": "$socioeconomico",
@@ -664,8 +765,18 @@ class MongoTerritorialAggregationRepository(
                                     "$lon",
                                     {
                                         "$ifNull": [
-                                            {"$arrayElemAt": ["$centroide.coordinates", 0]},
-                                            {"$arrayElemAt": ["$geometria.coordinates.0.0.0", 0]},
+                                            {
+                                                "$arrayElemAt": [
+                                                    "$centroide.coordinates",
+                                                    0,
+                                                ]
+                                            },
+                                            {
+                                                "$arrayElemAt": [
+                                                    "$geometria.coordinates.0.0.0",
+                                                    0,
+                                                ]
+                                            },
                                         ]
                                     },
                                 ]
@@ -680,8 +791,18 @@ class MongoTerritorialAggregationRepository(
                                     "$lat",
                                     {
                                         "$ifNull": [
-                                            {"$arrayElemAt": ["$centroide.coordinates", 1]},
-                                            {"$arrayElemAt": ["$geometria.coordinates.0.0.0", 1]},
+                                            {
+                                                "$arrayElemAt": [
+                                                    "$centroide.coordinates",
+                                                    1,
+                                                ]
+                                            },
+                                            {
+                                                "$arrayElemAt": [
+                                                    "$geometria.coordinates.0.0.0",
+                                                    1,
+                                                ]
+                                            },
                                         ]
                                     },
                                 ]

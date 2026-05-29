@@ -5,9 +5,6 @@ from src.domain.entities.school import School
 from src.domain.repository.base_repository import IBaseReadRepository
 from src.domain.value_objects.pagination import PaginatedResponse
 from src.domain.value_objects.query import QueryOptions
-from src.domain.enums.enum_uf import UF
-from src.domain.enums.enum_dependencia_administrativa import DependenciaAdministrativa
-from src.domain.enums.enum_tipo_localizacao import TipoLocalizacao
 
 
 class ISchoolRepository(IBaseReadRepository[School], ABC):
@@ -110,7 +107,7 @@ class ISchoolRepository(IBaseReadRepository[School], ABC):
         '''
         ...
     """
-    
+
     @abstractmethod
     async def get_by_id(self, school_id: str) -> Optional[School]:
         """
@@ -140,7 +137,9 @@ class ISchoolRepository(IBaseReadRepository[School], ABC):
         ...
 
     @abstractmethod
-    async def get_paraiba_geojson(self, municipio_id: str | None = None) -> Dict[str, Any]:
+    async def get_paraiba_geojson(
+        self, municipio_id: str | None = None
+    ) -> Dict[str, Any]:
         """Returns all schools in Paraiba as a GeoJSON FeatureCollection."""
         ...
 

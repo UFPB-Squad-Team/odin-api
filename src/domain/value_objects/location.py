@@ -1,4 +1,5 @@
 from typing import Tuple
+
 from pydantic import BaseModel
 
 LocationCoordinates = Tuple[float, float]

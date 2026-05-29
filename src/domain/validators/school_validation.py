@@ -1,12 +1,14 @@
 from typing import Optional
+
 from src.domain.exeptions.validation_error import DomainValidationError
-from ..value_objects.location import Location
-from ..value_objects.indicators import Indicadores
-from ..value_objects.infraestrutura import Infraestrutura
-from ..value_objects.endereco import Endereco
-from ..enums.enum_uf import UF
+
 from ..enums.enum_dependencia_administrativa import DependenciaAdministrativa
 from ..enums.enum_tipo_localizacao import TipoLocalizacao
+from ..enums.enum_uf import UF
+from ..value_objects.endereco import Endereco
+from ..value_objects.indicators import Indicadores
+from ..value_objects.infraestrutura import Infraestrutura
+from ..value_objects.location import Location
 
 
 class SchoolValidator:
@@ -125,12 +127,14 @@ class SchoolValidator:
     def _validar_metricas_etapa(self, nome: str, dados):
         """Helper para validar as taxas e médias de cada etapa de ensino."""
         if dados.alunosPorTurma < 0:
-            raise DomainValidationError(f"indicadores.{nome}: alunosPorTurma cannot be negative.")
-        
+            raise DomainValidationError(
+                f"indicadores.{nome}: alunosPorTurma cannot be negative."
+            )
+
         taxas = [
             ("taxaAprovacao", dados.taxaAprovacao),
             ("taxaReprovacao", dados.taxaReprovacao),
-            ("tnr", dados.tnr)
+            ("tnr", dados.tnr),
         ]
 
         for campo, valor in taxas:
@@ -138,9 +142,11 @@ class SchoolValidator:
                 raise DomainValidationError(
                     f"indicadores.{nome}: {campo} must be between 0 and 100. Received: {valor}"
                 )
-        
+
         if dados.horasAulaDiarias < 0:
-             raise DomainValidationError(f"indicadores.{nome}: horasAulaDiarias cannot be negative.")
+            raise DomainValidationError(
+                f"indicadores.{nome}: horasAulaDiarias cannot be negative."
+            )
 
     def _validate_endereco(self):
         if self._endereco is None:

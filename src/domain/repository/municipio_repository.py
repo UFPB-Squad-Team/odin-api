@@ -8,12 +8,10 @@ class IMunicipioRepository(ABC):
     async def list_municipios(
         self,
         sg_uf: str | None = None,
-    ) -> list[MunicipioCatalogItem]:
-        ...
+    ) -> list[MunicipioCatalogItem]: ...
 
     @abstractmethod
     async def get_resumo(
         self,
         municipio_id_ibge: str,
-    ) -> MunicipioResumo | None:
-        ...
+    ) -> MunicipioResumo | None: ...

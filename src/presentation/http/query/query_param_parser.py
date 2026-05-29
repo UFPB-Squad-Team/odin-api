@@ -23,7 +23,9 @@ def to_str(value: str) -> str:
 
 
 class QueryParamParser:
-    FILTER_PATTERN = re.compile(r"^filter\[(?P<field>[a-zA-Z0-9_]+)(?:__(?P<op>[a-z_]+))?\]$")
+    FILTER_PATTERN = re.compile(
+        r"^filter\[(?P<field>[a-zA-Z0-9_]+)(?:__(?P<op>[a-z_]+))?\]$"
+    )
 
     @classmethod
     def parse(
@@ -40,7 +42,9 @@ class QueryParamParser:
             page = int(query_params.get("page", 1))
             page_size = int(query_params.get("page_size", default_page_size))
         except ValueError as exc:
-            raise HTTPException(status_code=422, detail="Invalid page or page_size") from exc
+            raise HTTPException(
+                status_code=422, detail="Invalid page or page_size"
+            ) from exc
 
         if page < 1:
             raise HTTPException(status_code=422, detail="page must be >= 1")
@@ -52,7 +56,9 @@ class QueryParamParser:
             )
 
         cursor = query_params.get("cursor")
-        sort = cls._parse_sort(query_params.get("sort"), default_sort_field, allowed_fields)
+        sort = cls._parse_sort(
+            query_params.get("sort"), default_sort_field, allowed_fields
+        )
         fields = cls._parse_fields(query_params.get("fields"), allowed_fields)
         filters = cls._parse_filters(query_params, allowed_filters)
 
@@ -79,7 +85,9 @@ class QueryParamParser:
         field = raw_sort[1:] if raw_sort.startswith("-") else raw_sort
 
         if field not in allowed_fields:
-            raise HTTPException(status_code=422, detail=f"Sort field '{field}' is not allowed")
+            raise HTTPException(
+                status_code=422, detail=f"Sort field '{field}' is not allowed"
+            )
 
         return QuerySort(field=field, direction=direction)
 
@@ -122,7 +130,9 @@ class QueryParamParser:
             operator = match.group("op") or "eq"
 
             if field not in allowed_filters:
-                raise HTTPException(status_code=422, detail=f"Filter field '{field}' is not allowed")
+                raise HTTPException(
+                    status_code=422, detail=f"Filter field '{field}' is not allowed"
+                )
 
             filter_config = allowed_filters[field]
             if operator not in filter_config.operators:
@@ -132,15 +142,23 @@ class QueryParamParser:
                 )
 
             parsed_value = cls._cast_filter_value(value, operator, filter_config.caster)
-            filters.append(QueryFilter(field=field, operator=operator, value=parsed_value))
+            filters.append(
+                QueryFilter(field=field, operator=operator, value=parsed_value)
+            )
 
         return filters
 
     @staticmethod
-    def _cast_filter_value(raw_value: str, operator: str, caster: Callable[[str], Any]) -> Any:
+    def _cast_filter_value(
+        raw_value: str, operator: str, caster: Callable[[str], Any]
+    ) -> Any:
         try:
             if operator in {"in", "nin"}:
-                return [caster(item.strip()) for item in raw_value.split(",") if item.strip()]
+                return [
+                    caster(item.strip())
+                    for item in raw_value.split(",")
+                    if item.strip()
+                ]
             return caster(raw_value)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail="Invalid filter value") from exc

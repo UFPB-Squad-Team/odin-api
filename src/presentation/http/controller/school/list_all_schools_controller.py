@@ -1,24 +1,28 @@
-from fastapi import APIRouter, Query, Depends, HTTPException, Request
-from src.domain.entities.school import School
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
+
 from src.application.school.list_all_schools.list_all_schools import (
     ListAllSchools,
 )
-from .callable.school_callable import get_list_all_schools_use_case
 from src.application.school.list_all_schools.list_all_schools_dto import (
     ListSchoolsDTO,
 )
-from typing import List
-from pydantic import BaseModel
+from src.domain.entities.school import School
 from src.infrastructure.database.config.app_config import config
 from src.presentation.http.query.query_param_parser import QueryParamParser
-from .school_query_config import SCHOOL_ALLOWED_FILTERS, SCHOOL_QUERY_FIELDS
 from src.presentation.http.schemas.school_search_schema import SchoolSearchSchema
+
+from .callable.school_callable import get_list_all_schools_use_case
+from .school_query_config import SCHOOL_ALLOWED_FILTERS, SCHOOL_QUERY_FIELDS
 
 
 class PaginatedSchoolResponse(BaseModel):
     """
     Defines the response data structure for paginated endpoints.
     """
+
     schools: List[School]
     total_items: int
     page: int
@@ -70,9 +74,7 @@ async def list_all_schools_endpoint(
     search: str | None = Query(None),
     municipio: str | None = Query(None),
     municipio_id: str | None = Query(None),
-    list_all_schools_use_case: ListAllSchools = Depends(
-        get_list_all_schools_use_case
-    ),
+    list_all_schools_use_case: ListAllSchools = Depends(get_list_all_schools_use_case),
 ):
     cursor = request.query_params.get("cursor")
     offset = (page - 1) * page_size

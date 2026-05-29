@@ -1,8 +1,9 @@
-from motor.motor_asyncio import AsyncIOMotorClient
 import logging
+from typing import Any
+
+from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import ASCENDING, GEOSPHERE
 from pymongo.errors import PyMongoError
-from typing import Any
 
 from .app_config import config
 
@@ -29,7 +30,7 @@ class MongoDB:
             self.client = AsyncIOMotorClient(mongo_uri)
             self.database = self.client.get_database(config.database_name)
 
-            await self.client.admin.command('ping')
+            await self.client.admin.command("ping")
             await self._ensure_indexes()
 
             self._is_connected = True
@@ -90,7 +91,12 @@ class MongoDB:
 
         # Indexes for territorial aggregation endpoints and fallback.
         # Handle potential conflicts from previously created indexes
-        municipio_fields = ["co_municipio", "municipioIdIbge", "municipio_id_ibge", "idIbge"]
+        municipio_fields = [
+            "co_municipio",
+            "municipioIdIbge",
+            "municipio_id_ibge",
+            "idIbge",
+        ]
         for field in municipio_fields:
             await self._create_or_replace_index(
                 municipios,
@@ -160,7 +166,10 @@ class MongoDB:
         except PyMongoError as exc:
             error_msg = str(exc)
             # Handle IndexOptionsConflict (error code 85)
-            if "IndexOptionsConflict" in error_msg or "already exists with a different name" in error_msg:
+            if (
+                "IndexOptionsConflict" in error_msg
+                or "already exists with a different name" in error_msg
+            ):
                 logger.warning(
                     f"Index with similar key exists; dropping old index and recreating: {index_name}"
                 )
@@ -174,7 +183,9 @@ class MongoDB:
                         if existing_key_pairs == desired_key_pairs:
                             if idx_info.get("name") != index_name:
                                 await collection.drop_index(idx_info.get("name"))
-                                logger.info(f"Dropped old index: {idx_info.get('name')}")
+                                logger.info(
+                                    f"Dropped old index: {idx_info.get('name')}"
+                                )
                     # Now create the new index
                     await collection.create_index(
                         index_spec,
@@ -184,7 +195,9 @@ class MongoDB:
                     )
                     logger.info(f"Created index: {index_name}")
                 except Exception as inner_exc:
-                    logger.error(f"Failed to handle index conflict for {index_name}: {inner_exc}")
+                    logger.error(
+                        f"Failed to handle index conflict for {index_name}: {inner_exc}"
+                    )
             else:
                 logger.error(f"Failed to create index {index_name}: {exc}")
                 raise
