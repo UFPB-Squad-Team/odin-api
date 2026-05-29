@@ -20,5 +20,5 @@ class ITerritorialAggregationRepository(ABC):
         bairro: str | None = None,
         include_geometria: bool = False,
     ) -> list[dict[str, Any]]:
-        """Returns neighborhood documents for a municipality using bairro_indicadores as primary source."""
+        """Returns neighborhood documents for a municipality using bairro_indicadores as primary source, including cd_municipio-compatible documents."""
         ...

@@ -107,7 +107,7 @@ Retorna indicadores agregados **por bairro** de um município específico seguin
 #### Busca em Cascata (Fallback):
 
 1. **Primeiro:** Tenta buscar em `bairros_indicadores` (fonte primária)
-  - Procura por `municipioIdIbge` / `municipio_id_ibge` / `co_municipio` / `idIbge`
+  - Procura por `municipioIdIbge` / `municipio_id_ibge` / `cd_municipio` / `co_municipio` / `idIbge`
   - Se `bairro` for informado, filtra também por nome
 
 2. **Se não encontrar:** Agrega dados de `setor_indicadores` (fallback)

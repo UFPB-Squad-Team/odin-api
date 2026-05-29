@@ -118,6 +118,18 @@ class MongoDB:
                     f"idx_bairro_indicadores_{municipio_field}_{bairro_field}",
                 )
 
+        try:
+            await bairros.create_index(
+                [("geometria", GEOSPHERE)],
+                name="idx_bairro_indicadores_geometria",
+                background=True,
+            )
+        except PyMongoError as exc:
+            logger.warning(
+                "Skipping bairro geospatial index creation due to invalid geometry data: %s",
+                exc,
+            )
+
         await self._create_or_replace_index(
             schools,
             [("escolaNome", ASCENDING)],
