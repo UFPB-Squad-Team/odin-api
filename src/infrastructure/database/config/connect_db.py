@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class MongoDB:
-    def __init__(self):
-        self.client = None
-        self.database = None
+    def __init__(self) -> None:
+        self.client: AsyncIOMotorClient | None = None
+        self.database: Any | None = None
         self._is_connected = False
 
     async def connect(self) -> bool:
@@ -27,10 +27,13 @@ class MongoDB:
                 logger.error("Mongo URI is not configured")
                 return False
 
-            self.client = AsyncIOMotorClient(mongo_uri)
-            self.database = self.client.get_database(config.database_name)
+            client: AsyncIOMotorClient = AsyncIOMotorClient(mongo_uri)
+            database = client.get_database(config.database_name)
 
-            await self.client.admin.command("ping")
+            self.client = client
+            self.database = database
+
+            await client.admin.command("ping")
             await self._ensure_indexes()
 
             self._is_connected = True
@@ -42,11 +45,15 @@ class MongoDB:
             self._is_connected = False
             return False
 
-    async def _ensure_indexes(self):
-        schools = self.database["escolas"]
-        municipios = self.database["municipio_indicadores"]
-        bairros = self.database["bairro_indicadores"]
-        setores = self.database["setor_indicadores"]
+    async def _ensure_indexes(self) -> None:
+        database = self.database
+        if database is None:
+            raise RuntimeError("Database not connected")
+
+        schools = database["escolas"]
+        municipios = database["municipio_indicadores"]
+        bairros = database["bairro_indicadores"]
+        setores = database["setor_indicadores"]
 
         await schools.create_index(
             [
@@ -118,6 +125,18 @@ class MongoDB:
                     f"idx_bairro_indicadores_{municipio_field}_{bairro_field}",
                 )
 
+        try:
+            await bairros.create_index(
+                [("geometria", GEOSPHERE)],
+                name="idx_bairro_indicadores_geometria",
+                background=True,
+            )
+        except PyMongoError as exc:
+            logger.warning(
+                "Skipping bairro geospatial index creation due to invalid geometry data: %s",
+                exc,
+            )
+
         await self._create_or_replace_index(
             schools,
             [("escolaNome", ASCENDING)],
@@ -154,7 +173,7 @@ class MongoDB:
         index_spec: list[tuple[str, int]],
         index_name: str,
         **kwargs: Any,
-    ):
+    ) -> None:
         """Create or replace index, handling conflicts gracefully."""
         try:
             await collection.create_index(
@@ -202,7 +221,7 @@ class MongoDB:
                 logger.error(f"Failed to create index {index_name}: {exc}")
                 raise
 
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         """Close MongoDB connection"""
         if self.client:
             self.client.close()
@@ -214,11 +233,14 @@ class MongoDB:
         """Check if database is connected"""
         return self._is_connected
 
-    def get_collection(self, collection_name: str):
+    def get_collection(self, collection_name: str) -> Any:
         """Get a collection from the database"""
         if not self.is_connected:
             raise RuntimeError("Database not connected")
-        return self.database[collection_name]
+        database = self.database
+        if database is None:
+            raise RuntimeError("Database not connected")
+        return database[collection_name]
 
 
 mongodb = MongoDB()

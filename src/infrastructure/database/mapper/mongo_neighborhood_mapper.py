@@ -88,6 +88,7 @@ class MongoNeighborhoodMapper:
             doc,
             "municipioIdIbge",
             "municipio_id_ibge",
+            "cd_municipio",
             "co_municipio",
             "idIbge",
             default="",

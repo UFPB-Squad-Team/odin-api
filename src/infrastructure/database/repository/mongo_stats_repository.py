@@ -1,8 +1,11 @@
+from typing import Any
+
+
 class MongoStatsRepository:
-    def __init__(self, collection):
+    def __init__(self, collection: Any) -> None:
         self.collection = collection
 
-    async def get_summary_stats(self) -> dict:
+    async def get_summary_stats(self) -> dict[str, Any]:
         pipeline = [
             {"$match": {"estadoSigla": "PB"}},
             {

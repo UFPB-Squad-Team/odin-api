@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 from src.domain.exeptions.validation_error import DomainValidationError
 
@@ -40,7 +40,7 @@ class SchoolValidator:
 
         self._validate()
 
-    def _validate(self):
+    def _validate(self) -> None:
         """
         Orchestrator method that calls all individual validation checks.
         """
@@ -53,7 +53,7 @@ class SchoolValidator:
         self._validate_indicadores()
         self._validate_infraestrutura()
 
-    def _validate_ibge(self):
+    def _validate_ibge(self) -> None:
         """Validates the 7-digit IBGE municipality code."""
         if (
             not self._municipio_id_ibge
@@ -62,26 +62,26 @@ class SchoolValidator:
         ):
             raise DomainValidationError("municipio_id_ibge must be 7 digits.")
 
-    def _validate_inep(self):
+    def _validate_inep(self) -> None:
         """Validates the 8-digit INEP school code."""
         if not (10000000 <= self._escola_id_inep <= 99999999):
             raise DomainValidationError(
                 f"escola_id_inep is invalid, must be 8 digits: {self._escola_id_inep}."
             )
 
-    def _validate_nome(self):
+    def _validate_nome(self) -> None:
         """Validates the school name."""
         if not self._escola_nome or len(self._escola_nome.strip()) == 0:
             raise DomainValidationError("escola_nome is required.")
         if len(self._escola_nome) > 255:
             raise DomainValidationError("escola_nome must not exceed 255 characters.")
 
-    def _validate_municipio_nome(self):
+    def _validate_municipio_nome(self) -> None:
         """Validates the municipality name."""
         if not self._municipio_nome or len(self._municipio_nome.strip()) == 0:
             raise DomainValidationError("municipio_nome is required.")
 
-    def _validate_location(self):
+    def _validate_location(self) -> None:
         """Validates the Location dataclass."""
         if self._localizacao is None:
             raise DomainValidationError("localizacao is required.")
@@ -103,7 +103,7 @@ class SchoolValidator:
                 f"Invalid latitude: {lat}. Must be between -90 and 90."
             )
 
-    def _validate_indicadores(self):
+    def _validate_indicadores(self) -> None:
         """Validates the updated Indicadores structure with education stages."""
         if not self._indicadores:
             return
@@ -124,7 +124,7 @@ class SchoolValidator:
         for nome_etapa, dados in etapas:
             self._validar_metricas_etapa(nome_etapa, dados)
 
-    def _validar_metricas_etapa(self, nome: str, dados):
+    def _validar_metricas_etapa(self, nome: str, dados: Any) -> None:
         """Helper para validar as taxas e médias de cada etapa de ensino."""
         if dados.alunosPorTurma < 0:
             raise DomainValidationError(
@@ -148,11 +148,11 @@ class SchoolValidator:
                 f"indicadores.{nome}: horasAulaDiarias cannot be negative."
             )
 
-    def _validate_endereco(self):
+    def _validate_endereco(self) -> None:
         if self._endereco is None:
             raise DomainValidationError("endereco is required.")
 
-    def _validate_infraestrutura(self):
+    def _validate_infraestrutura(self) -> None:
         if self._infraestrutura and self._infraestrutura.salas.utilizadas < 0:
             raise DomainValidationError(
                 "infraestrutura.salas.utilizadas cannot be negative."

@@ -35,7 +35,7 @@ class FakeCollection:
         self.last_find_projection = None
         self.last_aggregate_pipeline = None
 
-    async def find_one(self, query):
+    async def find_one(self, query, projection=None):
         self.last_find_one_query = query
         return self.find_one_doc
 
@@ -47,6 +47,28 @@ class FakeCollection:
     def aggregate(self, pipeline):
         self.last_aggregate_pipeline = pipeline
         return FakeAggregateCursor(self.aggregate_docs)
+
+
+class GeoAwareFakeCollection(FakeCollection):
+    def __init__(self, find_one_responses=None, **kwargs):
+        super().__init__(**kwargs)
+        self.find_one_responses = list(find_one_responses or [])
+        self.find_one_queries = []
+
+    async def find_one(self, query, projection=None):
+        self.last_find_one_query = query
+        self.find_one_queries.append(query)
+
+        if not self.find_one_responses:
+            return None
+
+        if len(self.find_one_responses) == 1:
+            return self.find_one_responses[0]
+
+        if "$geoIntersects" in str(query):
+            return self.find_one_responses[-1]
+
+        return self.find_one_responses[0]
 
 
 @pytest.mark.asyncio
@@ -179,9 +201,9 @@ async def test_get_by_municipio_returns_primary_bairro_collection():
         find_docs=[
             {
                 "_id": "69e211325157cf0f20312a59",
-                "municipioIdIbge": "2507507",
+                "cd_municipio": "2507507",
                 "municipio": "Joao Pessoa",
-                "bairro": "Alto do Mateus",
+                "nm_bairro": "Alto do Mateus",
                 "cd_bairro_ibge": "2507507005",
                 "geometria": {
                     "type": "MultiPolygon",
@@ -226,6 +248,7 @@ async def test_get_by_municipio_returns_primary_bairro_collection():
     assert item["geometria"] is None
     assert item["tem_bairro_oficial"] is True
     assert item["nivel"] == "bairro"
+    assert item["municipioIdIbge"] == "2507507"
     assert item["socioeconomico"]["anoReferencia"] == 2022
     assert item["educacao"]["totalMatriculas"] == 2182
     assert item["source"] == "bairros_indicadores"
@@ -233,9 +256,189 @@ async def test_get_by_municipio_returns_primary_bairro_collection():
     assert {"$or": [
         {"municipioIdIbge": "2507507"},
         {"municipio_id_ibge": "2507507"},
+        {"cd_municipio": "2507507"},
         {"co_municipio": "2507507"},
         {"idIbge": "2507507"},
     ]} in bairro_collection.last_find_query["$and"]
+
+
+@pytest.mark.asyncio
+async def test_get_by_municipio_matches_cd_municipio_in_primary_collection():
+    municipio_collection = FakeCollection()
+    bairro_collection = FakeCollection(
+        find_docs=[
+            {
+                "_id": "69ee979682c705ca26d13187",
+                "cd_bairro": "2507507039",
+                "cd_municipio": "2507507",
+                "nm_municipio": "João Pessoa",
+                "nm_bairro": "Mangabeira",
+                "uf": "PB",
+                "socioeconomico": {
+                    "anoReferencia": 2022,
+                    "fonte": "IBGE Censo Demográfico 2022",
+                },
+                "educacao": {
+                    "totalEscolas": 1,
+                    "totalMatriculas": 314,
+                },
+            }
+        ]
+    )
+    setor_collection = FakeCollection()
+
+    repository = MongoTerritorialAggregationRepository(
+        municipio_collection=municipio_collection,
+        bairro_collection=bairro_collection,
+        setor_collection=setor_collection,
+    )
+
+    result = await repository.get_by_municipio(municipio_id_ibge="2507507")
+
+    assert len(result) == 1
+    item = result[0]
+    assert item["bairro"] == "Mangabeira"
+    assert item["municipioIdIbge"] == "2507507"
+    assert item["source"] == "bairros_indicadores"
+    assert item["nivel"] == "bairro"
+    assert setor_collection.last_aggregate_pipeline is None
+    assert bairro_collection.last_find_query is not None
+    assert {"cd_municipio": "2507507"} in bairro_collection.last_find_query["$and"][0]["$or"]
+
+
+@pytest.mark.asyncio
+async def test_get_by_municipio_enriches_blank_bairro_from_bairro_code():
+    municipio_collection = FakeCollection()
+    bairro_collection = GeoAwareFakeCollection(
+        find_docs=[
+            {
+                "_id": "69ee979682c705ca26d1316b",
+                "cd_bairro_ibge": "2507507011",
+                "cd_municipio": "2507507",
+                "municipio": "João Pessoa",
+                "bairro": "",
+                "nm_bairro": "",
+                "geometria": None,
+                "sg_uf": "PB",
+                "total_escolas": 0,
+                "total_matriculas": 0,
+                "tem_bairro_official": True,
+                "socioeconomico": {"anoReferencia": 2022, "fonte": "IBGE Censo Demográfico 2022"},
+                "educacao": None,
+            }
+        ],
+        find_one_responses=[
+            {
+                "bairro": "Área 51",
+                "nm_bairro": "Área 51",
+            }
+        ],
+    )
+    setor_collection = FakeCollection()
+
+    repository = MongoTerritorialAggregationRepository(
+        municipio_collection=municipio_collection,
+        bairro_collection=bairro_collection,
+        setor_collection=setor_collection,
+    )
+
+    result = await repository.get_by_municipio(municipio_id_ibge="2507507")
+
+    assert len(result) == 1
+    item = result[0]
+    assert item["bairro"] == "Área 51"
+    assert item["source"] == "bairros_indicadores"
+    assert bairro_collection.find_one_queries
+    assert "cd_bairro_ibge" in str(bairro_collection.find_one_queries[0])
+
+
+@pytest.mark.asyncio
+async def test_get_by_municipio_uses_geo_fallback_when_code_lookup_fails_and_geometry_exists():
+    municipio_collection = FakeCollection()
+    bairro_collection = GeoAwareFakeCollection(
+        find_docs=[
+            {
+                "_id": "69ee979682c705ca26d1316c",
+                "cd_bairro_ibge": "2507507012",
+                "cd_municipio": "2507507",
+                "municipio": "João Pessoa",
+                "bairro": "",
+                "nm_bairro": "",
+                "geometria": {
+                    "type": "MultiPolygon",
+                    "coordinates": [[[[ -34.86, -7.12 ], [ -34.85, -7.12 ], [ -34.85, -7.13 ], [ -34.86, -7.13 ], [ -34.86, -7.12 ]]]],
+                },
+                "sg_uf": "PB",
+                "total_escolas": 0,
+                "total_matriculas": 0,
+                "tem_bairro_official": True,
+                "socioeconomico": {"anoReferencia": 2022, "fonte": "IBGE Censo Demográfico 2022"},
+                "educacao": None,
+            }
+        ],
+        find_one_responses=[
+            None,
+            {
+                "bairro": "Mangabeira",
+                "nm_bairro": "Mangabeira",
+            },
+        ],
+    )
+    setor_collection = FakeCollection()
+
+    repository = MongoTerritorialAggregationRepository(
+        municipio_collection=municipio_collection,
+        bairro_collection=bairro_collection,
+        setor_collection=setor_collection,
+    )
+
+    result = await repository.get_by_municipio(municipio_id_ibge="2507507")
+
+    assert len(result) == 1
+    item = result[0]
+    assert item["bairro"] == "Mangabeira"
+    assert item["source"] == "bairros_indicadores"
+    assert any("$geoIntersects" in str(query) for query in bairro_collection.find_one_queries)
+
+
+@pytest.mark.asyncio
+async def test_get_by_municipio_uses_readable_label_when_official_bairro_has_no_name():
+    municipio_collection = FakeCollection()
+    bairro_collection = GeoAwareFakeCollection(
+        find_docs=[
+            {
+                "_id": "69ee979682c705ca26d1316d",
+                "cd_bairro_ibge": "2507507011",
+                "cd_municipio": "2507507",
+                "municipio": "João Pessoa",
+                "bairro": "",
+                "nm_bairro": "",
+                "geometria": None,
+                "sg_uf": "PB",
+                "total_escolas": 0,
+                "total_matriculas": 0,
+                "tem_bairro_official": True,
+                "socioeconomico": {"anoReferencia": 2022, "fonte": "IBGE Censo Demográfico 2022"},
+                "educacao": None,
+            }
+        ],
+        find_one_responses=[],
+    )
+    setor_collection = FakeCollection()
+
+    repository = MongoTerritorialAggregationRepository(
+        municipio_collection=municipio_collection,
+        bairro_collection=bairro_collection,
+        setor_collection=setor_collection,
+    )
+
+    result = await repository.get_by_municipio(municipio_id_ibge="2507507")
+
+    assert len(result) == 1
+    item = result[0]
+    assert item["bairro"] == "Bairro 2507507011"
+    assert item["source"] == "bairros_indicadores"
+    assert item["nivel"] == "bairro"
 
 
 @pytest.mark.asyncio

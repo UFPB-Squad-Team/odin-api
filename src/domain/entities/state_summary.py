@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -55,7 +57,7 @@ class SocioeconomicoStateStats(BaseModel):
 
     metodo_agregacao: str = Field(default="media_ponderada")
     populacao_total: int = 0
-    indicadores: dict | None = Field(default_factory=dict)
+    indicadores: dict[str, Any] = Field(default_factory=dict)
 
 
 class StateSummary(BaseModel):

@@ -82,7 +82,7 @@ class SchoolSearchSchema(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def validate_filters(self):
+    def validate_filters(self) -> "SchoolSearchSchema":
         for item in self.filters:
             if item.field not in SCHOOL_ALLOWED_FILTER_FIELDS:
                 raise ValueError(f"Filter field '{item.field}' is not allowed")

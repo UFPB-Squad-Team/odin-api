@@ -133,6 +133,7 @@ class MongoTerritorialAggregationRepository(
         )
 
         if primary_docs:
+            primary_docs = await self._enrich_primary_neighborhood_docs(primary_docs)
             return [
                 MongoNeighborhoodMapper.from_doc(
                     doc,
@@ -202,7 +203,7 @@ class MongoTerritorialAggregationRepository(
     async def get_resumo(
         self,
         municipio_id_ibge: str,
-    ) -> MunicipioResumo | None:
+    ) -> Any | None:
         query: dict[str, Any] = {
             "$or": [
                 {"co_municipio": municipio_id_ibge},
@@ -336,7 +337,11 @@ class MongoTerritorialAggregationRepository(
             source=source,
         )
 
-    async def _count_official_neighborhoods(self, municipio_id_ibge: str) -> int:
+    async def _count_official_neighborhoods(
+        self,
+        municipio_id_ibge: str,
+        municipio_nome: str | None = None,
+    ) -> int:
         query: dict[str, Any] = {
             "$or": [
                 {"municipioIdIbge": municipio_id_ibge},
@@ -346,6 +351,180 @@ class MongoTerritorialAggregationRepository(
             ]
         }
         return await self.bairro_collection.count_documents(query)
+
+    async def _enrich_primary_neighborhood_docs(
+        self,
+        docs: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        enriched_docs: list[dict[str, Any]] = []
+        for doc in docs:
+            resolved_name = await self._resolve_official_neighborhood_name(doc)
+            if resolved_name:
+                updated_doc = dict(doc)
+                updated_doc["bairro"] = resolved_name
+                updated_doc.setdefault("nm_bairro", resolved_name)
+                enriched_docs.append(updated_doc)
+                continue
+
+            enriched_docs.append(doc)
+
+        return enriched_docs
+
+    async def _resolve_official_neighborhood_name(
+        self,
+        doc: dict[str, Any],
+    ) -> str | None:
+        current_name = TerritorialAggregationMapper._pick(
+            doc,
+            "bairro",
+            "nm_bairro",
+            "nome_area",
+            "situacao",
+            default=None,
+        )
+        if isinstance(current_name, str) and current_name.strip():
+            return current_name.strip()
+
+        municipio_id = TerritorialAggregationMapper._pick(
+            doc,
+            "municipioIdIbge",
+            "municipio_id_ibge",
+            "cd_municipio",
+            "co_municipio",
+            "idIbge",
+            default=None,
+        )
+        code = TerritorialAggregationMapper._pick(
+            doc,
+            "cd_bairro_ibge",
+            "cd_bairro",
+            default=None,
+        )
+
+        municipio_clauses: list[dict[str, Any]] = []
+        if municipio_id is not None:
+            municipio_clauses = [
+                {"municipioIdIbge": str(municipio_id)},
+                {"municipio_id_ibge": str(municipio_id)},
+                {"cd_municipio": str(municipio_id)},
+                {"co_municipio": str(municipio_id)},
+                {"idIbge": str(municipio_id)},
+            ]
+
+        name_projection = {
+            "bairro": 1,
+            "nm_bairro": 1,
+            "nome_area": 1,
+            "situacao": 1,
+        }
+
+        if code is not None:
+            municipality_clause = (
+                {"$or": municipio_clauses} if municipio_clauses else {}
+            )
+            code_query: dict[str, Any] = {
+                "$and": [
+                    municipality_clause,
+                    {
+                        "$or": [
+                            {"cd_bairro_ibge": code},
+                            {"cd_bairro": code},
+                        ]
+                    },
+                    {
+                        "$or": [
+                            {"bairro": {"$nin": [None, ""]}},
+                            {"nm_bairro": {"$nin": [None, ""]}},
+                            {"nome_area": {"$nin": [None, ""]}},
+                            {"situacao": {"$nin": [None, ""]}},
+                        ]
+                    },
+                ]
+            }
+            code_doc = await self.bairro_collection.find_one(
+                code_query, name_projection
+            )
+            if code_doc:
+                resolved = TerritorialAggregationMapper._pick(
+                    code_doc,
+                    "bairro",
+                    "nm_bairro",
+                    "nome_area",
+                    "situacao",
+                    default=None,
+                )
+                if isinstance(resolved, str) and resolved.strip():
+                    return resolved.strip()
+
+        geometry = TerritorialAggregationMapper._pick(
+            doc, "geometria", "geometry", default=None
+        )
+        if not isinstance(geometry, dict) or not geometry:
+            return self._build_official_neighborhood_label(doc)
+
+        municipality_clause = {"$or": municipio_clauses} if municipio_clauses else {}
+        geo_query: dict[str, Any] = {
+            "$and": [
+                municipality_clause,
+                {
+                    "geometria": {
+                        "$geoIntersects": {
+                            "$geometry": geometry,
+                        }
+                    }
+                },
+                {
+                    "$or": [
+                        {"bairro": {"$nin": [None, ""]}},
+                        {"nm_bairro": {"$nin": [None, ""]}},
+                        {"nome_area": {"$nin": [None, ""]}},
+                        {"situacao": {"$nin": [None, ""]}},
+                    ]
+                },
+            ]
+        }
+
+        geo_doc = await self.bairro_collection.find_one(geo_query, name_projection)
+        if not geo_doc:
+            return self._build_official_neighborhood_label(doc)
+
+        resolved = TerritorialAggregationMapper._pick(
+            geo_doc,
+            "bairro",
+            "nm_bairro",
+            "nome_area",
+            "situacao",
+            default=None,
+        )
+        if isinstance(resolved, str) and resolved.strip():
+            return resolved.strip()
+
+        return self._build_official_neighborhood_label(doc)
+
+    @staticmethod
+    def _build_official_neighborhood_label(doc: dict[str, Any]) -> str | None:
+        code = TerritorialAggregationMapper._pick(
+            doc,
+            "cd_bairro_ibge",
+            "cd_bairro",
+            default=None,
+        )
+        if code is not None:
+            return f"Bairro {code}"
+
+        municipio_id = TerritorialAggregationMapper._pick(
+            doc,
+            "municipioIdIbge",
+            "municipio_id_ibge",
+            "cd_municipio",
+            "co_municipio",
+            "idIbge",
+            default=None,
+        )
+        if municipio_id is not None:
+            return f"Bairro sem nome {municipio_id}"
+
+        return "Bairro sem nome"
 
     async def _find_neighborhood_docs(
         self,
@@ -359,6 +538,7 @@ class MongoTerritorialAggregationRepository(
                     "$or": [
                         {"municipioIdIbge": municipio_id_ibge},
                         {"municipio_id_ibge": municipio_id_ibge},
+                        {"cd_municipio": municipio_id_ibge},
                         {"co_municipio": municipio_id_ibge},
                         {"idIbge": municipio_id_ibge},
                     ]
@@ -398,6 +578,7 @@ class MongoTerritorialAggregationRepository(
             "municipioIdIbge": 1,
             "municipio_id_ibge": 1,
             "co_municipio": 1,
+            "cd_municipio": 1,
             "idIbge": 1,
             "sg_uf": 1,
             "uf": 1,

@@ -124,7 +124,7 @@ async def get_city_aggregations(
     tags=["aggregations"],
     summary="List neighborhoods by city",
     description=(
-        "Returns neighborhood documents for a municipality using bairros_indicadores as the primary source. "
+        "Returns neighborhood documents for a municipality using bairros_indicadores as the primary source, including docs keyed by cd_municipio. "
         "If no neighborhood document exists, falls back to setor_indicadores aggregation. "
         "The response keeps the database contract, including _id and geometria."
     ),
