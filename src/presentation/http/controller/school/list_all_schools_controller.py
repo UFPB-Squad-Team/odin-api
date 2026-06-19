@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
@@ -79,18 +79,19 @@ async def list_all_schools_endpoint(
     page_size: int = Query(10, ge=1, le=config.max_page_size),
     search: str | None = Query(None, description="Termo de busca (nome da escola)"),
     municipio: str | None = Query(None, description="Nome do município"),
-    municipio_id: str | None = Query(None, description="Código IBGE do município (7 dígitos)"),
+    municipio_id: str | None = Query(
+        None, description="Código IBGE do município (7 dígitos)"
+    ),
     dependencia_adm: List[str] | None = Query(
-        None, 
-        description="Filtro por dependência administrativa (ex: 'Federal', 'Estadual', 'Municipal', 'Privada')"
+        None,
+        description="Filtro por dependência administrativa (ex: 'Federal', 'Estadual', 'Municipal', 'Privada')",
     ),
     tipo_localizacao: List[str] | None = Query(
-        None,
-        description="Filtro por tipo de localização (ex: 'Urbana', 'Rural')"
+        None, description="Filtro por tipo de localização (ex: 'Urbana', 'Rural')"
     ),
     fuzzy_search: bool = Query(
         False,
-        description="Habilitar busca fuzzy (flexível, com correção de acentos e variações)"
+        description="Habilitar busca fuzzy (flexível, com correção de acentos e variações)",
     ),
     list_all_schools_use_case: ListAllSchools = Depends(get_list_all_schools_use_case),
 ):

@@ -185,7 +185,9 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
                 elif item.operator == "in":
                     municipio_values = []
                     for value in item.value:
-                        municipio_values.extend(self._build_municipio_id_values(str(value)))
+                        municipio_values.extend(
+                            self._build_municipio_id_values(str(value))
+                        )
                 else:
                     regular_filters.append(item)
                     continue
@@ -206,17 +208,19 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
                     }
                 )
                 continue
-            
+
             if item.operator == "regex":
                 field = self.field_map.get(item.field, item.field)
                 clauses.append({field: {"$regex": item.value, "$options": "i"}})
                 continue
-            
+
             if item.operator == "contains":
                 field = self.field_map.get(item.field, item.field)
-                clauses.append({field: {"$regex": re.escape(str(item.value)), "$options": "i"}})
+                clauses.append(
+                    {field: {"$regex": re.escape(str(item.value)), "$options": "i"}}
+                )
                 continue
-            
+
             regular_filters.append(item)
 
         regular_clause = super()._build_filters(regular_filters)

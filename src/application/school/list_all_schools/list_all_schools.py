@@ -74,11 +74,11 @@ class ListAllSchools:
         return await self.school_repository.find_paginated(dto.query)
 
     def _build_fuzzy_pattern(self, search_term: str) -> str:
-        
         import unicodedata
-        normalized = unicodedata.normalize('NFKD', search_term)
-        normalized = ''.join(c for c in normalized if not unicodedata.combining(c))
-        
+
+        normalized = unicodedata.normalize("NFKD", search_term)
+        normalized = "".join(c for c in normalized if not unicodedata.combining(c))
+
         words = normalized.strip().split()
         if len(words) == 1:
             return f".*{re.escape(words[0])}.*"
