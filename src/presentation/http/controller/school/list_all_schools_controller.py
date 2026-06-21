@@ -40,6 +40,9 @@ class ListAllSchoolsController:
         search_term: str | None = None,
         municipio: str | None = None,
         municipio_id: str | None = None,
+        dependencia_adm: List[str] | None = None,
+        tipo_localizacao: List[str] | None = None,
+        fuzzy_search: bool = False,
     ):
         query = QueryParamParser.parse(
             query_params=request.query_params,
@@ -57,6 +60,9 @@ class ListAllSchoolsController:
             search_term=search_term,
             municipio=municipio,
             municipio_id=municipio_id,
+            dependencia_adm=dependencia_adm,
+            tipo_localizacao=tipo_localizacao,
+            fuzzy_search=fuzzy_search,
         )
 
         return await self.list_all_schools_use_case.execute(dto=dto)
@@ -71,9 +77,22 @@ async def list_all_schools_endpoint(
     request: Request,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=config.max_page_size),
-    search: str | None = Query(None),
-    municipio: str | None = Query(None),
-    municipio_id: str | None = Query(None),
+    search: str | None = Query(None, description="Termo de busca (nome da escola)"),
+    municipio: str | None = Query(None, description="Nome do município"),
+    municipio_id: str | None = Query(
+        None, description="Código IBGE do município (7 dígitos)"
+    ),
+    dependencia_adm: List[str] | None = Query(
+        None,
+        description="Filtro por dependência administrativa (ex: 'Federal', 'Estadual', 'Municipal', 'Privada')",
+    ),
+    tipo_localizacao: List[str] | None = Query(
+        None, description="Filtro por tipo de localização (ex: 'Urbana', 'Rural')"
+    ),
+    fuzzy_search: bool = Query(
+        False,
+        description="Habilitar busca fuzzy (flexível, com correção de acentos e variações)",
+    ),
     list_all_schools_use_case: ListAllSchools = Depends(get_list_all_schools_use_case),
 ):
     cursor = request.query_params.get("cursor")
@@ -93,6 +112,9 @@ async def list_all_schools_endpoint(
         search_term=search,
         municipio=municipio,
         municipio_id=municipio_id,
+        dependencia_adm=dependencia_adm,
+        tipo_localizacao=tipo_localizacao,
+        fuzzy_search=fuzzy_search,
     )
     return PaginatedSchoolResponse(
         schools=result.items,

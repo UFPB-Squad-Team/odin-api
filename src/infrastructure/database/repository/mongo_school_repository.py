@@ -1,4 +1,5 @@
 import asyncio
+import re
 import time
 import unicodedata
 from typing import Any
@@ -178,35 +179,49 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
         regular_filters: list[QueryFilter] = []
 
         for item in filters:
-            if item.field != "municipio_id_ibge":
-                regular_filters.append(item)
+            if item.field == "municipio_id_ibge":
+                if item.operator == "eq":
+                    municipio_values = self._build_municipio_id_values(str(item.value))
+                elif item.operator == "in":
+                    municipio_values = []
+                    for value in item.value:
+                        municipio_values.extend(
+                            self._build_municipio_id_values(str(value))
+                        )
+                else:
+                    regular_filters.append(item)
+                    continue
+
+                unique_values: list[str | int] = []
+                for value in municipio_values:
+                    if value not in unique_values:
+                        unique_values.append(value)
+
+                clauses.append(
+                    {
+                        "$or": [
+                            {"municipioIdIbge": {"$in": unique_values}},
+                            {"municipio_id_ibge": {"$in": unique_values}},
+                            {"co_municipio": {"$in": unique_values}},
+                            {"idIbge": {"$in": unique_values}},
+                        ]
+                    }
+                )
                 continue
 
-            if item.operator == "eq":
-                municipio_values = self._build_municipio_id_values(str(item.value))
-            elif item.operator == "in":
-                municipio_values = []
-                for value in item.value:
-                    municipio_values.extend(self._build_municipio_id_values(str(value)))
-            else:
-                regular_filters.append(item)
+            if item.operator == "regex":
+                field = self.field_map.get(item.field, item.field)
+                clauses.append({field: {"$regex": item.value, "$options": "i"}})
                 continue
 
-            unique_values: list[str | int] = []
-            for value in municipio_values:
-                if value not in unique_values:
-                    unique_values.append(value)
+            if item.operator == "contains":
+                field = self.field_map.get(item.field, item.field)
+                clauses.append(
+                    {field: {"$regex": re.escape(str(item.value)), "$options": "i"}}
+                )
+                continue
 
-            clauses.append(
-                {
-                    "$or": [
-                        {"municipioIdIbge": {"$in": unique_values}},
-                        {"municipio_id_ibge": {"$in": unique_values}},
-                        {"co_municipio": {"$in": unique_values}},
-                        {"idIbge": {"$in": unique_values}},
-                    ]
-                }
-            )
+            regular_filters.append(item)
 
         regular_clause = super()._build_filters(regular_filters)
         if regular_clause:
