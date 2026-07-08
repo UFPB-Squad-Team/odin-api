@@ -799,18 +799,32 @@ class MongoTerritorialAggregationRepository(
                     "tem_bairro_official": {
                         "$ifNull": [
                             "$tem_bairro_official",
-                            {"$ifNull": ["$tem_bairro_oficial", True]},
+                            {"$ifNull": ["$tem_bairro_oficial", False]},
                         ]
                     },
-                    "bairro_oficial": {"$ifNull": ["$bairro", "$nm_bairro"]},
+                    "bairro_resolvido": {
+                        "$cond": {
+                            "if": {
+                                "$or": [
+                                    {"$ne": ["$bairro", None]},
+                                    {"$ne": ["$nm_bairro", None]},
+                                ]
+                            },
+                            "then": {"$ifNull": ["$bairro", "$nm_bairro"]},
+                            "else": {
+                                "$ifNull": [
+                                    "$nome_area",
+                                    {"$ifNull": ["$situacao", "Setor sem nome"]},
+                                ]
+                            },
+                        }
+                    },
                     "cd_setor": {
                         "$ifNull": [
                             "$cd_setor",
                             {"$ifNull": ["$co_setor", "$id_setor"]},
                         ]
                     },
-                    "nome_area": 1,
-                    "situacao": 1,
                     "total_escolas": {
                         "$ifNull": [
                             "$total_escolas",
@@ -994,32 +1008,6 @@ class MongoTerritorialAggregationRepository(
             },
             {
                 "$addFields": {
-                    "bairro_resolvido": {
-                        "$cond": {
-                            "if": "$tem_bairro_official",
-                            "then": "$bairro_oficial",
-                            "else": {
-                                "$ifNull": [
-                                    "$nome_area",
-                                    {"$ifNull": ["$situacao", "$bairro_oficial"]},
-                                ]
-                            },
-                        }
-                    }
-                }
-            },
-            {
-                "$match": {
-                    "$expr": {
-                        "$and": [
-                            {"$ne": ["$bairro_resolvido", None]},
-                            {"$ne": ["$bairro_resolvido", ""]},
-                        ]
-                    }
-                }
-            },
-            {
-                "$addFields": {
                     "has_geometria": {
                         "$cond": {
                             "if": {"$ne": ["$geometria", None]},
@@ -1049,38 +1037,15 @@ class MongoTerritorialAggregationRepository(
                 }
             )
 
+        # NÃO agrupar por bairro - retornar cada setor censitário separadamente
+        # Isso preserva a granularidade original dos dados do censo
         pipeline.extend(
             [
-                {
-                    "$group": {
-                        "_id": "$bairro_resolvido",
-                        "co_municipio": {"$first": "$co_municipio"},
-                        "bairro": {"$first": "$bairro_resolvido"},
-                        "cd_setor": {"$first": "$cd_setor"},
-                        "municipio": {"$first": "$municipio"},
-                        "uf": {"$first": "$uf"},
-                        "tem_bairro_official": {"$first": "$tem_bairro_official"},
-                        "total_escolas": {"$sum": "$total_escolas"},
-                        "total_alunos": {"$sum": "$total_alunos"},
-                        "avg_ideb": {"$avg": "$avg_ideb"},
-                        "pct_com_biblioteca": {"$avg": "$pct_com_biblioteca"},
-                        "pct_com_internet": {"$avg": "$pct_com_internet"},
-                        "pct_com_internet_alunos": {"$avg": "$pct_com_internet_alunos"},
-                        "pct_com_lab_informatica": {"$avg": "$pct_com_lab_informatica"},
-                        "pct_com_lab_ciencias": {"$avg": "$pct_com_lab_ciencias"},
-                        "pct_sem_acessibilidade": {"$avg": "$pct_sem_acessibilidade"},
-                        "geometria": {"$first": "$geometria"},
-                        "socioeconomico": {"$first": "$socioeconomico"},
-                        "educacao": {"$first": "$educacao"},
-                        "avg_lon": {"$avg": "$lon"},
-                        "avg_lat": {"$avg": "$lat"},
-                    }
-                },
                 {
                     "$project": {
                         "_id": 0,
                         "co_municipio": 1,
-                        "bairro": 1,
+                        "bairro": "$bairro_resolvido",
                         "cd_setor": 1,
                         "municipio": 1,
                         "uf": 1,
@@ -1097,12 +1062,34 @@ class MongoTerritorialAggregationRepository(
                         "geometria": 1,
                         "socioeconomico": 1,
                         "educacao": 1,
-                        "avg_lon": 1,
-                        "avg_lat": 1,
+                        "lon": 1,
+                        "lat": 1,
                     }
                 },
-                {"$sort": {"total_escolas": -1, "bairro": 1}},
+                {"$sort": {"bairro": 1, "cd_setor": 1}},
             ]
+        )
+
+        pipeline.insert(
+            -1,
+            {
+                "$addFields": {
+                    "educacao": {
+                        "$ifNull": [
+                            "$educacao",
+                            {
+                                "totalEscolas": "$total_escolas",
+                                "totalMatriculas": "$total_alunos",
+                                "pctComInternet": "$pct_com_internet",
+                                "pctComBiblioteca": "$pct_com_biblioteca",
+                                "pctComLaboratorioInformatica": "$pct_com_lab_informatica",
+                                "pctSemAcessibilidade": "$pct_sem_acessibilidade",
+                            },
+                        ]
+                    },
+                    "socioeconomico": {"$ifNull": ["$socioeconomico", {}]},
+                }
+            },
         )
 
         return await self.setor_collection.aggregate(pipeline).to_list(length=None)

@@ -40,6 +40,15 @@ def _to_neighborhood_feature_collection(
             "setor" if item.get("source") == "setor_indicadores" else "bairro"
         )
 
+        if nivel == "setor":
+            cd_setor = item.get("cd_setor")
+            if cd_setor:
+                data_quality_label = f"Setor censitário {cd_setor} (agregação IBGE)"
+            else:
+                data_quality_label = "Setor censitário (agregação IBGE)"
+        else:
+            data_quality_label = "Dados de bairro oficial"
+
         properties: dict[str, Any] = {
             "id": str(resolved_id),
             "municipioIdIbge": str(item.get("municipioIdIbge", "")),
@@ -57,6 +66,7 @@ def _to_neighborhood_feature_collection(
             "pct_sem_acessibilidade": item.get("pct_sem_acessibilidade"),
             "tem_bairro_oficial": bool(item.get("tem_bairro_oficial", True)),
             "nivel": nivel,
+            "data_quality_label": data_quality_label,
             "socioeconomico": item.get("socioeconomico"),
             "educacao": item.get("educacao"),
             "source": str(item.get("source", "")),

@@ -204,6 +204,7 @@ class MongoNeighborhoodAggregation(BaseModel):
         validation_alias=AliasChoices("tem_bairro_oficial", "tem_bairro_official"),
     )
     nivel: Literal["bairro", "setor"] = "bairro"
+    data_quality_label: str | None = None
     cd_setor: str | None = None
     socioeconomico: Socioeconomico | None = None
     educacao: EducacaoMunicipio | None = None
@@ -228,6 +229,7 @@ class NeighborhoodAggregationProperties(BaseModel):
     pct_sem_acessibilidade: float | int | None = None
     tem_bairro_oficial: bool = Field(serialization_alias="tem_bairro_oficial")
     nivel: Literal["bairro", "setor"] = "bairro"
+    data_quality_label: str | None = None
     cd_setor: str | None = None
     socioeconomico: Socioeconomico | None = None
     educacao: EducacaoMunicipio | None = None
