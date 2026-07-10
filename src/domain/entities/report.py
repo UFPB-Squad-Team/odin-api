@@ -137,6 +137,14 @@ class StateDossierData(BaseModel):
 
     infraestrutura: dict[str, float] = Field(default_factory=dict)
 
+    taxa_aprovacao_media: float | None = None
+    taxa_reprovacao_media: float | None = None
+    ideb_medio: float | None = None
+    pct_internet: float | None = None
+    pct_biblioteca: float | None = None
+    pct_lab_informatica: float | None = None
+    pct_acessibilidade: float | None = None
+
     escolas_por_dependencia: dict[str, int] = Field(default_factory=dict)
     escolas_por_zona: dict[str, int] = Field(default_factory=dict)
 

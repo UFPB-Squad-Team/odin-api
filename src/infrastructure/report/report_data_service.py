@@ -281,7 +281,7 @@ class ReportDataService:
             ano_referencia_socioeconomico=ano_referencia_socioeconomico,
             fonte_socioeconomico=fonte_socioeconomico,
             populacao_total=self._safe_int(populacao.get("total")),
-            indicadores_indisponivei=[],
+            indicadores_indisponiveis=[],
         )
 
     async def _get_municipio_info(
@@ -597,7 +597,7 @@ class ReportDataService:
             aprovacao_por_etapa["Anos Iniciais"] = float(aprov_media)
             aprovacao_por_etapa["Anos Finais"] = float(aprov_media)
 
-        abandono_por_etapa = {}
+        abandono_por_etapa: dict[str, float] = {}
 
         return StateDossierData(
             uf=uf,
@@ -609,10 +609,17 @@ class ReportDataService:
             aprovacao_por_etapa=aprovacao_por_etapa,
             abandono_por_etapa=abandono_por_etapa,
             infraestrutura=infraestrutura,
+            taxa_aprovacao_media=escolas_data.get("taxa_aprovacao_media"),
+            taxa_reprovacao_media=escolas_data.get("taxa_reprovacao_media"),
+            ideb_medio=escolas_data.get("ideb_medio"),
+            pct_internet=escolas_data.get("pct_internet"),
+            pct_biblioteca=escolas_data.get("pct_biblioteca"),
+            pct_lab_informatica=escolas_data.get("pct_lab_informatica"),
+            pct_acessibilidade=escolas_data.get("pct_acessibilidade"),
             escolas_por_dependencia=escolas_data.get("por_dependencia", {}),
             escolas_por_zona=escolas_data.get("por_zona", {}),
             top_municipios=top_municipios,
-            indicadores_indisponivei=[],
+            indicadores_indisponiveis=[],
         )
 
     async def _aggregate_escolas_por_estado(self, sg_uf: str) -> dict[str, Any]:
