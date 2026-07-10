@@ -269,7 +269,7 @@ def generate_grouped_bar_chart(
 
     for i, (name, values) in enumerate(series.items()):
         offset = (i - n_series / 2) * bar_width + bar_width / 2
-        bars = ax.bar(
+        ax.bar(
             [xi + offset for xi in x],
             values,
             bar_width,

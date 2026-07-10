@@ -682,7 +682,7 @@ class DossierPDF:
             ax1.set_title(
                 f"Dependência Administrativa\n({total_dep} escolas)", fontsize=10
             )
-            for i, (val, label) in enumerate(zip(dep_vals, dep_labels, strict=False)):
+            for i, (val, _label) in enumerate(zip(dep_vals, dep_labels, strict=False)):
                 ax1.annotate(
                     f"{val} escolas",
                     xy=(0, -1.3 - i * 0.18),
@@ -1046,7 +1046,7 @@ class DossierPDF:
             markersize=7,
             label="Alunos por Turma (eixo dir.)",
         )
-        for i, (xi, val) in enumerate(zip(x, alunos_turma, strict=False)):
+        for _i, (xi, val) in enumerate(zip(x, alunos_turma, strict=False)):
             ax2.text(
                 xi + w / 2,
                 val + 0.3,
@@ -1167,13 +1167,6 @@ class DossierPDF:
         kpis2 = []
         if d.ideb_por_etapa:
             for etapa, val in d.ideb_por_etapa.items():
-                meta = (
-                    "6,0"
-                    if "Iniciais" in etapa
-                    else "5,5"
-                    if "Finais" in etapa
-                    else "5,2"
-                )
                 color = (
                     ODIN_GREEN
                     if val >= 6.0
