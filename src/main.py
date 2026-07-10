@@ -33,12 +33,19 @@ from src.presentation.http.controller.search.container import (
     container as search_container,
 )
 from src.presentation.http.controller.search.index import router as search_controller
+from src.presentation.http.controller.report.container import (
+    container as report_container,
+)
+from src.presentation.http.controller.report.index import router as report_controller
 from src.presentation.http.controller.state.container import (
     container as state_container,
 )
 from src.presentation.http.controller.state.index import router as state_controller
 from src.presentation.http.middleware.global_exception_handler import (
     register_global_exception_handlers,
+)
+from src.presentation.http.middleware.request_id_middleware import (
+    RequestIDMiddleware,
 )
 
 
@@ -142,6 +149,8 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
+app.add_middleware(RequestIDMiddleware)
+
 register_global_exception_handlers(app)
 
 
@@ -153,3 +162,4 @@ app.include_router(bairro_controller, prefix="/api/v1", tags=["bairros"])
 app.include_router(search_controller, prefix="/api/v1", tags=["busca"])
 app.include_router(aggregation_controller, prefix="/api/v1", tags=["aggregations"])
 app.include_router(stats_router, prefix="/api/v1", tags=["stats"])
+app.include_router(report_controller, prefix="/api/v1", tags=["relatorios"])
