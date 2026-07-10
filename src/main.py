@@ -22,6 +22,7 @@ from src.presentation.http.controller.municipio.container import (
 from src.presentation.http.controller.municipio.index import (
     router as municipio_controller,
 )
+from src.presentation.http.controller.report.index import router as report_controller
 from src.presentation.http.controller.school.container import (
     container as school_container,
 )
@@ -33,10 +34,6 @@ from src.presentation.http.controller.search.container import (
     container as search_container,
 )
 from src.presentation.http.controller.search.index import router as search_controller
-from src.presentation.http.controller.report.container import (
-    container as report_container,
-)
-from src.presentation.http.controller.report.index import router as report_controller
 from src.presentation.http.controller.state.container import (
     container as state_container,
 )

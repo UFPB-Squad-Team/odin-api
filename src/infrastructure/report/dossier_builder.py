@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 import logging
 
-from src.domain.entities.report import MunicipioDossierData, StateDossierData
 from src.infrastructure.report.pdf_generator import DossierPDF as MunicipioDossierPDF
 from src.infrastructure.report.pdf_generator import StateDossierPDF
 from src.infrastructure.report.report_data_service import ReportDataService

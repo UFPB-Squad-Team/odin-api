@@ -3,7 +3,6 @@ Application configuration using pydantic-settings.
 Loads from environment variables with validation and type coercion.
 """
 
-import os
 from pathlib import Path
 from typing import Any, cast
 

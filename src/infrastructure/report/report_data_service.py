@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 
 class ReportDataService:
-
     def __init__(
         self,
         escolas_collection: Any,
@@ -29,22 +28,34 @@ class ReportDataService:
             logger.warning("Municipio %s not found", municipio_id_ibge)
             return None
 
-        municipio_nome = municipio.get("municipio") or municipio.get("nm_municipio") or ""
+        municipio_nome = (
+            municipio.get("municipio") or municipio.get("nm_municipio") or ""
+        )
         uf = municipio.get("sg_uf") or municipio.get("uf") or ""
         educacao = municipio.get("educacao") or {}
         socioeconomico = municipio.get("socioeconomico") or {}
 
-        top_escolas = await self._get_top_escolas(municipio_id_ibge, municipio_nome, limit=5)
+        top_escolas = await self._get_top_escolas(
+            municipio_id_ibge, municipio_nome, limit=5
+        )
         top_escolas_named = []
         for school in top_escolas:
-            top_escolas_named.append({
-                "nome": school.get("escolaNome") or school.get("escola_nome") or "",
-                "ideb": school.get("ideb") or school.get("ideb_media") or 0,
-                "dependencia": school.get("dependenciaAdm") or school.get("dependencia_adm") or "",
-                "localizacao": school.get("tipoLocalizacao") or school.get("tipo_localizacao") or "",
-            })
+            top_escolas_named.append(
+                {
+                    "nome": school.get("escolaNome") or school.get("escola_nome") or "",
+                    "ideb": school.get("ideb") or school.get("ideb_media") or 0,
+                    "dependencia": school.get("dependenciaAdm")
+                    or school.get("dependencia_adm")
+                    or "",
+                    "localizacao": school.get("tipoLocalizacao")
+                    or school.get("tipo_localizacao")
+                    or "",
+                }
+            )
 
-        escolas_data = await self._aggregate_escolas_por_municipio(municipio_id_ibge, municipio_nome)
+        escolas_data = await self._aggregate_escolas_por_municipio(
+            municipio_id_ibge, municipio_nome
+        )
 
         infraestrutura = {}
         for key, db_key in [
@@ -95,7 +106,11 @@ class ReportDataService:
             if val is not None:
                 ideb_por_etapa[stage] = float(val)
 
-            suffix_map = {"Anos Iniciais": "Ai", "Anos Finais": "Af", "Ensino Médio": "Em"}
+            suffix_map = {
+                "Anos Iniciais": "Ai",
+                "Anos Finais": "Af",
+                "Ensino Médio": "Em",
+            }
             suffix = suffix_map[stage]
 
             val = educacao.get(f"mediaTaxaAprovacao{suffix}")
@@ -147,9 +162,18 @@ class ReportDataService:
                 if val is not None:
                     estrutura_etaria[faixa] = float(val)
         else:
-            for key in ["pctCriancas0a9", "pctIdosos60Mais", "pctJovens15a29", "pctAdultos30a59"]:
+            for key in [
+                "pctCriancas0a9",
+                "pctIdosos60Mais",
+                "pctJovens15a29",
+                "pctAdultos30a59",
+            ]:
                 if key in socioeconomico.get("estruturaEtaria", {}):
-                    estrutura_etaria[key.replace("pct", "").replace("0a9", "0-9").replace("60Mais", "60+")] = float(socioeconomico["estruturaEtaria"][key])
+                    estrutura_etaria[
+                        key.replace("pct", "")
+                        .replace("0a9", "0-9")
+                        .replace("60Mais", "60+")
+                    ] = float(socioeconomico["estruturaEtaria"][key])
 
         raca = {}
         if "raca" in socioeconomico:
@@ -165,7 +189,9 @@ class ReportDataService:
 
         razao_dependencia = None
         if "razaoDependencia" in socioeconomico.get("estruturaEtaria", {}):
-            razao_dependencia = self._safe_float(socioeconomico["estruturaEtaria"]["razaoDependencia"])
+            razao_dependencia = self._safe_float(
+                socioeconomico["estruturaEtaria"]["razaoDependencia"]
+            )
 
         saneamento = {}
         if "saneamento" in socioeconomico:
@@ -182,27 +208,41 @@ class ReportDataService:
         total_domicilios = None
         media_moradores_domicilio = None
         if "populacao" in socioeconomico:
-            total_domicilios = self._safe_int(socioeconomico["populacao"].get("totalDomicilios"))
-            media_moradores_domicilio = self._safe_float(socioeconomico["populacao"].get("mediaMoradoresPorDomicilio"))
+            total_domicilios = self._safe_int(
+                socioeconomico["populacao"].get("totalDomicilios")
+            )
+            media_moradores_domicilio = self._safe_float(
+                socioeconomico["populacao"].get("mediaMoradoresPorDomicilio")
+            )
 
         taxa_analfabetismo = None
         if "educacaoPopulacao" in socioeconomico:
-            taxa_analfabetismo = self._safe_float(socioeconomico["educacaoPopulacao"].get("taxaAnalfabetismo15Mais"))
+            taxa_analfabetismo = self._safe_float(
+                socioeconomico["educacaoPopulacao"].get("taxaAnalfabetismo15Mais")
+            )
 
         pct_responsavel_feminino = None
         if "familia" in socioeconomico:
-            pct_responsavel_feminino = self._safe_float(socioeconomico["familia"].get("pctResponsavelFeminino"))
+            pct_responsavel_feminino = self._safe_float(
+                socioeconomico["familia"].get("pctResponsavelFeminino")
+            )
 
         obitos_domicilios = None
         obitos_infantis_0a4 = None
         if "mortalidade" in socioeconomico:
-            obitos_domicilios = self._safe_int(socioeconomico["mortalidade"].get("totalObitosDomicilios"))
-            obitos_infantis_0a4 = self._safe_int(socioeconomico["mortalidade"].get("obitosInfantis0a4"))
+            obitos_domicilios = self._safe_int(
+                socioeconomico["mortalidade"].get("totalObitosDomicilios")
+            )
+            obitos_infantis_0a4 = self._safe_int(
+                socioeconomico["mortalidade"].get("obitosInfantis0a4")
+            )
 
         ano_referencia_socioeconomico = None
         fonte_socioeconomico = None
         if "anoReferencia" in socioeconomico:
-            ano_referencia_socioeconomico = self._safe_int(socioeconomico["anoReferencia"])
+            ano_referencia_socioeconomico = self._safe_int(
+                socioeconomico["anoReferencia"]
+            )
         if "fonte" in socioeconomico:
             fonte_socioeconomico = socioeconomico["fonte"]
 
@@ -244,9 +284,16 @@ class ReportDataService:
             indicadores_indisponivei=[],
         )
 
-    async def _get_municipio_info(self, municipio_id_ibge: str) -> dict[str, Any] | None:
+    async def _get_municipio_info(
+        self, municipio_id_ibge: str
+    ) -> dict[str, Any] | None:
         for candidate in self._id_candidates(municipio_id_ibge):
-            for field in ("municipioIdIbge", "municipio_id_ibge", "co_municipio", "idIbge"):
+            for field in (
+                "municipioIdIbge",
+                "municipio_id_ibge",
+                "co_municipio",
+                "idIbge",
+            ):
                 doc = await self._municipios.find_one(
                     {field: candidate},
                     projection={
@@ -275,56 +322,129 @@ class ReportDataService:
                 "$group": {
                     "_id": None,
                     "total_escolas": {"$sum": 1},
-                    "total_alunos": {"$sum": {"$ifNull": ["$matriculas.totalAlunos", 0]}},
+                    "total_alunos": {
+                        "$sum": {"$ifNull": ["$matriculas.totalAlunos", 0]}
+                    },
                     "avg_taxa_aprovacao": {
                         "$avg": {
                             "$avg": [
-                                {"$ifNull": ["$indicadores.fundamentalAnosIniciais.taxaAprovacao", 0]},
-                                {"$ifNull": ["$indicadores.fundamentalAnosFinais.taxaAprovacao", 0]},
+                                {
+                                    "$ifNull": [
+                                        "$indicadores.fundamentalAnosIniciais.taxaAprovacao",
+                                        0,
+                                    ]
+                                },
+                                {
+                                    "$ifNull": [
+                                        "$indicadores.fundamentalAnosFinais.taxaAprovacao",
+                                        0,
+                                    ]
+                                },
                             ]
                         }
                     },
                     "avg_taxa_reprovacao": {
                         "$avg": {
                             "$avg": [
-                                {"$ifNull": ["$indicadores.fundamentalAnosIniciais.taxaReprovacao", 0]},
-                                {"$ifNull": ["$indicadores.fundamentalAnosFinais.taxaReprovacao", 0]},
+                                {
+                                    "$ifNull": [
+                                        "$indicadores.fundamentalAnosIniciais.taxaReprovacao",
+                                        0,
+                                    ]
+                                },
+                                {
+                                    "$ifNull": [
+                                        "$indicadores.fundamentalAnosFinais.taxaReprovacao",
+                                        0,
+                                    ]
+                                },
                             ]
                         }
                     },
                     "avg_ideb_iniciais": {"$avg": "$ideb.anosIniciais"},
                     "avg_ideb_finais": {"$avg": "$ideb.anosFinais"},
                     "pct_internet": {
-                        "$avg": {"$cond": [{"$eq": ["$infraestrutura.possuiInternet", True]}, 100, 0]}
+                        "$avg": {
+                            "$cond": [
+                                {"$eq": ["$infraestrutura.possuiInternet", True]},
+                                100,
+                                0,
+                            ]
+                        }
                     },
                     "pct_biblioteca": {
-                        "$avg": {"$cond": [{"$eq": ["$infraestrutura.possuiBiblioteca", True]}, 100, 0]}
+                        "$avg": {
+                            "$cond": [
+                                {"$eq": ["$infraestrutura.possuiBiblioteca", True]},
+                                100,
+                                0,
+                            ]
+                        }
                     },
                     "pct_lab_informatica": {
-                        "$avg": {"$cond": [{"$eq": ["$infraestrutura.possuiLabInformatica", True]}, 100, 0]}
+                        "$avg": {
+                            "$cond": [
+                                {"$eq": ["$infraestrutura.possuiLabInformatica", True]},
+                                100,
+                                0,
+                            ]
+                        }
                     },
                     "pct_lab_ciencias": {
-                        "$avg": {"$cond": [{"$eq": ["$infraestrutura.possuiLabCiencias", True]}, 100, 0]}
+                        "$avg": {
+                            "$cond": [
+                                {"$eq": ["$infraestrutura.possuiLabCiencias", True]},
+                                100,
+                                0,
+                            ]
+                        }
                     },
                     "pct_quadra": {
-                        "$avg": {"$cond": [{"$eq": ["$infraestrutura.possuiQuadraEsportes", True]}, 100, 0]}
+                        "$avg": {
+                            "$cond": [
+                                {"$eq": ["$infraestrutura.possuiQuadraEsportes", True]},
+                                100,
+                                0,
+                            ]
+                        }
                     },
                     "pct_acessibilidade": {
-                        "$avg": {"$cond": [{"$eq": ["$infraestrutura.possuiAcessibilidadePcd", True]}, 100, 0]}
+                        "$avg": {
+                            "$cond": [
+                                {
+                                    "$eq": [
+                                        "$infraestrutura.possuiAcessibilidadePcd",
+                                        True,
+                                    ]
+                                },
+                                100,
+                                0,
+                            ]
+                        }
                     },
                     "pct_agua_potavel": {
-                        "$avg": {"$cond": [{"$eq": ["$infraestrutura.possuiAguaPotavel", True]}, 100, 0]}
+                        "$avg": {
+                            "$cond": [
+                                {"$eq": ["$infraestrutura.possuiAguaPotavel", True]},
+                                100,
+                                0,
+                            ]
+                        }
                     },
-                    "escolas_por_dependencia": {
-                        "$push": "$dependenciaAdm"
+                    "escolas_por_dependencia": {"$push": "$dependenciaAdm"},
+                    "escolas_por_zona": {"$push": "$tipoLocalizacao"},
+                    "total_matriculas_infantil": {
+                        "$sum": {"$ifNull": ["$matriculas.educacaoInfantil", 0]}
                     },
-                    "escolas_por_zona": {
-                        "$push": "$tipoLocalizacao"
+                    "total_matriculas_fundamental": {
+                        "$sum": {"$ifNull": ["$matriculas.fundamentalTotal", 0]}
                     },
-                    "total_matriculas_infantil": {"$sum": {"$ifNull": ["$matriculas.educacaoInfantil", 0]}},
-                    "total_matriculas_fundamental": {"$sum": {"$ifNull": ["$matriculas.fundamentalTotal", 0]}},
-                    "total_matriculas_medio": {"$sum": {"$ifNull": ["$matriculas.ensinoMedio", 0]}},
-                    "total_matriculas_eja": {"$sum": {"$ifNull": ["$matriculas.eja", 0]}},
+                    "total_matriculas_medio": {
+                        "$sum": {"$ifNull": ["$matriculas.ensinoMedio", 0]}
+                    },
+                    "total_matriculas_eja": {
+                        "$sum": {"$ifNull": ["$matriculas.eja", 0]}
+                    },
                 }
             },
         ]
@@ -349,9 +469,13 @@ class ReportDataService:
 
         matriculas_etapa = {}
         if r.get("total_matriculas_infantil", 0) > 0:
-            matriculas_etapa["Educação Infantil"] = r.get("total_matriculas_infantil", 0)
+            matriculas_etapa["Educação Infantil"] = r.get(
+                "total_matriculas_infantil", 0
+            )
         if r.get("total_matriculas_fundamental", 0) > 0:
-            matriculas_etapa["Ensino Fundamental"] = r.get("total_matriculas_fundamental", 0)
+            matriculas_etapa["Ensino Fundamental"] = r.get(
+                "total_matriculas_fundamental", 0
+            )
         if r.get("total_matriculas_medio", 0) > 0:
             matriculas_etapa["Ensino Médio"] = r.get("total_matriculas_medio", 0)
         if r.get("total_matriculas_eja", 0) > 0:
@@ -428,12 +552,14 @@ class ReportDataService:
         uf = sg_uf.upper()
 
         total_municipios = await self._municipios.count_documents(
-            {"$or": [
-                {"sg_uf": uf},
-                {"uf": uf},
-                {"estado_sigla": uf},
-                {"estadoSigla": uf},
-            ]}
+            {
+                "$or": [
+                    {"sg_uf": uf},
+                    {"uf": uf},
+                    {"estado_sigla": uf},
+                    {"estadoSigla": uf},
+                ]
+            }
         )
 
         if total_municipios == 0:
@@ -505,43 +631,90 @@ class ReportDataService:
                 "$group": {
                     "_id": None,
                     "total_escolas": {"$sum": 1},
-                    "total_alunos": {"$sum": {"$ifNull": ["$matriculas.totalAlunos", 0]}},
+                    "total_alunos": {
+                        "$sum": {"$ifNull": ["$matriculas.totalAlunos", 0]}
+                    },
                     "avg_taxa_aprovacao": {
                         "$avg": {
                             "$avg": [
-                                {"$ifNull": ["$indicadores.fundamentalAnosIniciais.taxaAprovacao", 0]},
-                                {"$ifNull": ["$indicadores.fundamentalAnosFinais.taxaAprovacao", 0]},
+                                {
+                                    "$ifNull": [
+                                        "$indicadores.fundamentalAnosIniciais.taxaAprovacao",
+                                        0,
+                                    ]
+                                },
+                                {
+                                    "$ifNull": [
+                                        "$indicadores.fundamentalAnosFinais.taxaAprovacao",
+                                        0,
+                                    ]
+                                },
                             ]
                         }
                     },
                     "avg_taxa_reprovacao": {
                         "$avg": {
                             "$avg": [
-                                {"$ifNull": ["$indicadores.fundamentalAnosIniciais.taxaReprovacao", 0]},
-                                {"$ifNull": ["$indicadores.fundamentalAnosFinais.taxaReprovacao", 0]},
+                                {
+                                    "$ifNull": [
+                                        "$indicadores.fundamentalAnosIniciais.taxaReprovacao",
+                                        0,
+                                    ]
+                                },
+                                {
+                                    "$ifNull": [
+                                        "$indicadores.fundamentalAnosFinais.taxaReprovacao",
+                                        0,
+                                    ]
+                                },
                             ]
                         }
                     },
                     "avg_ideb_iniciais": {"$avg": "$ideb.anosIniciais"},
                     "avg_ideb_finais": {"$avg": "$ideb.anosFinais"},
                     "pct_internet": {
-                        "$avg": {"$cond": [{"$eq": ["$infraestrutura.possuiInternet", True]}, 100, 0]}
+                        "$avg": {
+                            "$cond": [
+                                {"$eq": ["$infraestrutura.possuiInternet", True]},
+                                100,
+                                0,
+                            ]
+                        }
                     },
                     "pct_biblioteca": {
-                        "$avg": {"$cond": [{"$eq": ["$infraestrutura.possuiBiblioteca", True]}, 100, 0]}
+                        "$avg": {
+                            "$cond": [
+                                {"$eq": ["$infraestrutura.possuiBiblioteca", True]},
+                                100,
+                                0,
+                            ]
+                        }
                     },
                     "pct_lab_informatica": {
-                        "$avg": {"$cond": [{"$eq": ["$infraestrutura.possuiLabInformatica", True]}, 100, 0]}
+                        "$avg": {
+                            "$cond": [
+                                {"$eq": ["$infraestrutura.possuiLabInformatica", True]},
+                                100,
+                                0,
+                            ]
+                        }
                     },
                     "pct_acessibilidade": {
-                        "$avg": {"$cond": [{"$eq": ["$infraestrutura.possuiAcessibilidadePcd", True]}, 100, 0]}
+                        "$avg": {
+                            "$cond": [
+                                {
+                                    "$eq": [
+                                        "$infraestrutura.possuiAcessibilidadePcd",
+                                        True,
+                                    ]
+                                },
+                                100,
+                                0,
+                            ]
+                        }
                     },
-                    "escolas_por_dependencia": {
-                        "$push": "$dependenciaAdm"
-                    },
-                    "escolas_por_zona": {
-                        "$push": "$tipoLocalizacao"
-                    },
+                    "escolas_por_dependencia": {"$push": "$dependenciaAdm"},
+                    "escolas_por_zona": {"$push": "$tipoLocalizacao"},
                 }
             },
         ]
@@ -594,7 +767,12 @@ class ReportDataService:
                 },
                 {
                     "$or": [
-                        {"educacao.mediaIdebAnosIniciais": {"$exists": True, "$ne": None}},
+                        {
+                            "educacao.mediaIdebAnosIniciais": {
+                                "$exists": True,
+                                "$ne": None,
+                            }
+                        },
                         {"mediaIdebAnosIniciais": {"$exists": True, "$ne": None}},
                     ]
                 },
@@ -640,26 +818,49 @@ class ReportDataService:
 
         top_list = []
         for m in results:
-            top_list.append({
-                "nome": m.get("municipio") or m.get("nm_municipio") or m.get("municipio_nome") or "",
-                "ideb": m.get("ideb") or 0,
-                "total_escolas": m.get("total_escolas") or 0,
-                "total_matriculas": m.get("total_matriculas") or 0,
-            })
+            top_list.append(
+                {
+                    "nome": m.get("municipio")
+                    or m.get("nm_municipio")
+                    or m.get("municipio_nome")
+                    or "",
+                    "ideb": m.get("ideb") or 0,
+                    "total_escolas": m.get("total_escolas") or 0,
+                    "total_matriculas": m.get("total_matriculas") or 0,
+                }
+            )
 
         return top_list
 
     @staticmethod
     def _uf_to_name(sg_uf: str) -> str:
         names = {
-            "AC": "Acre", "AL": "Alagoas", "AP": "Amapá", "AM": "Amazonas",
-            "BA": "Bahia", "CE": "Ceará", "DF": "Distrito Federal",
-            "ES": "Espírito Santo", "GO": "Goiás", "MA": "Maranhão",
-            "MT": "Mato Grosso", "MS": "Mato Grosso do Sul", "MG": "Minas Gerais",
-            "PA": "Pará", "PB": "Paraíba", "PR": "Paraná", "PE": "Pernambuco",
-            "PI": "Piauí", "RJ": "Rio de Janeiro", "RN": "Rio Grande do Norte",
-            "RS": "Rio Grande do Sul", "RO": "Rondônia", "RR": "Roraima",
-            "SC": "Santa Catarina", "SP": "São Paulo", "SE": "Sergipe",
+            "AC": "Acre",
+            "AL": "Alagoas",
+            "AP": "Amapá",
+            "AM": "Amazonas",
+            "BA": "Bahia",
+            "CE": "Ceará",
+            "DF": "Distrito Federal",
+            "ES": "Espírito Santo",
+            "GO": "Goiás",
+            "MA": "Maranhão",
+            "MT": "Mato Grosso",
+            "MS": "Mato Grosso do Sul",
+            "MG": "Minas Gerais",
+            "PA": "Pará",
+            "PB": "Paraíba",
+            "PR": "Paraná",
+            "PE": "Pernambuco",
+            "PI": "Piauí",
+            "RJ": "Rio de Janeiro",
+            "RN": "Rio Grande do Norte",
+            "RS": "Rio Grande do Sul",
+            "RO": "Rondônia",
+            "RR": "Roraima",
+            "SC": "Santa Catarina",
+            "SP": "São Paulo",
+            "SE": "Sergipe",
             "TO": "Tocantins",
         }
         return names.get(sg_uf.upper(), sg_uf.upper())

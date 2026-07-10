@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import io
 import logging
-from typing import Any
 
 import matplotlib
 import matplotlib.pyplot as plt
