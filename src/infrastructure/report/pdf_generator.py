@@ -1229,7 +1229,13 @@ class DossierPDF:
         for e in etapas:
             aband_val: float | None = d.abandono_por_etapa.get(e)
             if aband_val is not None:
-                c = ODIN_GREEN if aband_val < 1 else ODIN_ORANGE if aband_val < 5 else ODIN_RED
+                c = (
+                    ODIN_GREEN
+                    if aband_val < 1
+                    else ODIN_ORANGE
+                    if aband_val < 5
+                    else ODIN_RED
+                )
                 txt = f'<font color="{c}"><b>{aband_val:.1f}%</b></font>'
             else:
                 txt = "<font color='#6C757D'>—</font>"
@@ -1240,7 +1246,13 @@ class DossierPDF:
         for e in etapas:
             distor_val: float | None = d.distorcao_idade_serie_por_etapa.get(e)
             if distor_val is not None:
-                c = ODIN_GREEN if distor_val < 10 else ODIN_ORANGE if distor_val < 25 else ODIN_RED
+                c = (
+                    ODIN_GREEN
+                    if distor_val < 10
+                    else ODIN_ORANGE
+                    if distor_val < 25
+                    else ODIN_RED
+                )
                 txt = f'<font color="{c}"><b>{distor_val:.1f}%</b></font>'
             else:
                 txt = "<font color='#6C757D'>—</font>"
@@ -1251,7 +1263,10 @@ class DossierPDF:
         for e in etapas:
             alunos_val: float | None = d.alunos_por_turma_etapa.get(e)
             row.append(
-                Paragraph(f"{alunos_val:.1f}" if alunos_val is not None else "—", s["BodyText"])
+                Paragraph(
+                    f"{alunos_val:.1f}" if alunos_val is not None else "—",
+                    s["BodyText"],
+                )
             )
         rows_res.append(row)
         # Docentes c/ superior
