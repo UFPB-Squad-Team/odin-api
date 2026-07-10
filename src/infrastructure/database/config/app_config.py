@@ -3,10 +3,17 @@ Application configuration using pydantic-settings.
 Loads from environment variables with validation and type coercion.
 """
 
+from pathlib import Path
 from typing import Any, cast
 
+from dotenv import load_dotenv
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
+
+# Load .env file explicitly from API root directory
+env_file = Path(__file__).resolve().parent.parent.parent.parent / ".env"
+if env_file.exists():
+    load_dotenv(env_file, override=True)
 
 
 class AppConfig(BaseSettings):
