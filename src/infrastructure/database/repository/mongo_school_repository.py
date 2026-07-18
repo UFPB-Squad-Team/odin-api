@@ -57,10 +57,10 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             default_sort_field="escolaIdInep",
             use_estimated_total_for_unfiltered=config.use_estimated_total_for_unfiltered_lists,
         )
-        self._paraiba_geojson_cache: dict[str, tuple[float, dict]] = {}
-        self._paraiba_geojson_ttl_seconds = 60.0
-        self._paraiba_geojson_cache_lock = asyncio.Lock()
-        self._paraiba_geojson_cache_max_keys = 512
+        self._geojson_cache: dict[str, tuple[float, dict]] = {}
+        self._geojson_ttl_seconds = 60.0
+        self._geojson_cache_lock = asyncio.Lock()
+        self._geojson_cache_max_keys = 512
         self._geojson_indexes_ready = False
         self._geojson_index_lock = asyncio.Lock()
 
@@ -118,7 +118,7 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
                         ("escolaIdInep", 1),
                     ],
                     background=True,
-                    name="idx_geojson_paraiba_municipio",
+                    name="idx_geojson_municipio",
                 )
                 await self.collection.create_index(
                     [
@@ -127,34 +127,32 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
                         ("escolaIdInep", 1),
                     ],
                     background=True,
-                    name="idx_geojson_paraiba_municipio_legacy",
+                    name="idx_geojson_municipio_legacy",
                 )
             except Exception:
                 pass
 
             self._geojson_indexes_ready = True
 
-    def _cleanup_paraiba_geojson_cache(self, now: float) -> None:
+    def _cleanup_geojson_cache(self, now: float) -> None:
         expired_keys = [
             key
-            for key, (cached_at, _) in self._paraiba_geojson_cache.items()
-            if (now - cached_at) >= self._paraiba_geojson_ttl_seconds
+            for key, (cached_at, _) in self._geojson_cache.items()
+            if (now - cached_at) >= self._geojson_ttl_seconds
         ]
         for key in expired_keys:
-            self._paraiba_geojson_cache.pop(key, None)
+            self._geojson_cache.pop(key, None)
 
-        if len(self._paraiba_geojson_cache) <= self._paraiba_geojson_cache_max_keys:
+        if len(self._geojson_cache) <= self._geojson_cache_max_keys:
             return
 
         oldest_keys = sorted(
-            self._paraiba_geojson_cache.items(),
+            self._geojson_cache.items(),
             key=lambda item: item[1][0],
         )
-        to_remove = (
-            len(self._paraiba_geojson_cache) - self._paraiba_geojson_cache_max_keys
-        )
+        to_remove = len(self._geojson_cache) - self._geojson_cache_max_keys
         for key, _ in oldest_keys[:to_remove]:
-            self._paraiba_geojson_cache.pop(key, None)
+            self._geojson_cache.pop(key, None)
 
     async def list_all(
         self,
@@ -233,22 +231,31 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             return clauses[0]
         return {"$and": clauses}
 
-    async def get_paraiba_geojson(self, municipio_id: str | None = None) -> dict:
+    async def get_geojson(
+        self,
+        sg_uf: list[str] | None = None,
+        municipio_id: str | None = None,
+    ) -> dict:
         await self._ensure_geojson_indexes()
 
-        cache_key = municipio_id or "__all__"
+        normalized_ufs = sorted(
+            {uf.strip().upper() for uf in sg_uf or [] if uf.strip()}
+        )
+        cache_scope = ",".join(normalized_ufs) or "__all_ufs__"
+        cache_key = f"{cache_scope}:{municipio_id or '__all__'}"
         now = time.monotonic()
-        self._cleanup_paraiba_geojson_cache(now)
-        cached = self._paraiba_geojson_cache.get(cache_key)
-        if cached and (now - cached[0]) < self._paraiba_geojson_ttl_seconds:
+        self._cleanup_geojson_cache(now)
+        cached = self._geojson_cache.get(cache_key)
+        if cached and (now - cached[0]) < self._geojson_ttl_seconds:
             return cached[1]
 
         match_query: dict[str, Any] = {
-            "estadoSigla": "PB",
             "localizacao.type": "Point",
             "localizacao.coordinates.0": {"$type": "number"},
             "localizacao.coordinates.1": {"$type": "number"},
         }
+        if normalized_ufs:
+            match_query["estadoSigla"] = {"$in": normalized_ufs}
 
         if municipio_id is not None:
             municipio_id_values = self._build_municipio_id_values(municipio_id)
@@ -309,7 +316,7 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
                         "id": feature_id,
                         "escola_nome": doc.get("escolaNome"),
                         "escola_id_inep": escola_id_inep,
-                        "estado_sigla": doc.get("estadoSigla") or "PB",
+                        "estado_sigla": doc.get("estadoSigla"),
                         "inep": doc.get("inep"),
                         "inse": inse,
                         "indicadores": indicadores,
@@ -331,18 +338,20 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             )
 
         result = {"type": "FeatureCollection", "features": features}
-        async with self._paraiba_geojson_cache_lock:
+        async with self._geojson_cache_lock:
             write_now = time.monotonic()
-            self._cleanup_paraiba_geojson_cache(write_now)
-            self._paraiba_geojson_cache[cache_key] = (write_now, result)
+            self._cleanup_geojson_cache(write_now)
+            self._geojson_cache[cache_key] = (write_now, result)
         return result
+
+    async def get_paraiba_geojson(self, municipio_id: str | None = None) -> dict:
+        return await self.get_geojson(municipio_id=municipio_id)
 
     async def get_bairros_geojson(self, municipio: str) -> dict:
         municipio_candidates = self._build_municipio_candidates(municipio)
         pipeline = [
             {
                 "$match": {
-                    "estadoSigla": "PB",
                     "municipioNome": {"$in": municipio_candidates},
                     "endereco.bairro": {"$type": "string", "$ne": ""},
                     "localizacao.type": "Point",
