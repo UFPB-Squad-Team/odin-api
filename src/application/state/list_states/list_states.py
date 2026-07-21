@@ -12,3 +12,5 @@ class ListStatesUseCase:
     async def execute(self, q: Optional[str] = None) -> List[State]:
         all_states = await self.state_repository.list_distinct_states(query=q)
         return [state for state in all_states if state.sigla.upper() in self.nordeste_siglas]
+
+        
