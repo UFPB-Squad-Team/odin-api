@@ -1,11 +1,12 @@
 import pytest
 from bson import ObjectId
 
-from src.domain.value_objects.query import QueryFilter, QueryOptions
 from src.infrastructure.database.config.app_config import config
 from src.infrastructure.database.repository.mongo_school_repository import (
     MongoSchoolRepository,
 )
+from src.domain.value_objects.query import QueryFilter, QueryOptions
+
 from tests.factories import FakeCollection, build_school_document
 
 
@@ -139,7 +140,7 @@ async def test_get_bairros_geojson_builds_expected_match_and_feature_collection(
 
     assert collection.aggregate_pipeline is not None
     match_stage = collection.aggregate_pipeline[0]["$match"]
-    assert "estadoSigla" not in match_stage
+    assert match_stage["estadoSigla"] == "PB"
     assert "Joao Pessoa" in match_stage["municipioNome"]["$in"]
     assert "João Pessoa" in match_stage["municipioNome"]["$in"]
 
@@ -178,7 +179,7 @@ async def test_get_bairros_geojson_ignores_docs_without_coordinates():
 
 
 @pytest.mark.asyncio
-async def test_get_geojson_uses_multiple_ufs_and_escola_id_inep_as_feature_id():
+async def test_get_paraiba_geojson_uses_escola_id_inep_as_feature_id():
     collection = FakeCollection([
         {
             "_id": "mongo-id-1",
@@ -210,11 +211,11 @@ async def test_get_geojson_uses_multiple_ufs_and_escola_id_inep_as_feature_id():
     ])
     repository = MongoSchoolRepository(collection=collection)
 
-    result = await repository.get_geojson(sg_uf=["pe", "PB", "pb"])
+    result = await repository.get_paraiba_geojson()
 
     assert collection.find_args is not None
     query, projection = collection.find_args
-    assert query["estadoSigla"] == {"$in": ["PB", "PE"]}
+    assert query["estadoSigla"] == "PB"
     assert "$or" not in query
     assert projection is not None
     assert projection["localizacao"] == 1
@@ -241,7 +242,7 @@ async def test_get_geojson_uses_multiple_ufs_and_escola_id_inep_as_feature_id():
 
 
 @pytest.mark.asyncio
-async def test_get_geojson_uses_required_property_defaults():
+async def test_get_paraiba_geojson_uses_required_property_defaults():
     collection = FakeCollection([
         {
             "_id": "mongo-id-1",
@@ -249,7 +250,6 @@ async def test_get_geojson_uses_required_property_defaults():
             "escolaIdInep": 25033158,
             "municipioNome": "Agua Branca",
             "municipioIdIbge": "2500106",
-            "estadoSigla": "PE",
             "dependenciaAdm": "Municipal",
             "tipoLocalizacao": "Urbana",
             "localizacao": {"type": "Point", "coordinates": [-34.86, -7.12]},
@@ -257,10 +257,10 @@ async def test_get_geojson_uses_required_property_defaults():
     ])
     repository = MongoSchoolRepository(collection=collection)
 
-    result = await repository.get_geojson(sg_uf=["PE"])
+    result = await repository.get_paraiba_geojson()
 
     properties = result["features"][0]["properties"]
-    assert properties["estado_sigla"] == "PE"
+    assert properties["estado_sigla"] == "PB"
     assert properties["inep"] is None
     assert properties["inse"] is None
     assert properties["indicadores"] == {"anoReferencia": 2025, "totalAlunos": 0}
@@ -270,21 +270,20 @@ async def test_get_geojson_uses_required_property_defaults():
 
 
 @pytest.mark.asyncio
-async def test_get_geojson_adds_municipio_id_filter_when_informed():
+async def test_get_paraiba_geojson_adds_municipio_id_filter_when_informed():
     collection = FakeCollection([])
     repository = MongoSchoolRepository(collection=collection)
 
-    await repository.get_geojson(sg_uf=["PB", "PE"], municipio_id="2507507")
+    await repository.get_paraiba_geojson(municipio_id="2507507")
 
     assert collection.find_args is not None
     query, _ = collection.find_args
-    assert query["estadoSigla"] == {"$in": ["PB", "PE"]}
     assert "$or" in query
     assert {"municipioIdIbge": {"$in": ["2507507", 2507507]}} in query["$or"]
 
 
 @pytest.mark.asyncio
-async def test_get_geojson_accepts_legacy_municipio_field_resolution():
+async def test_get_paraiba_geojson_accepts_legacy_municipio_field_resolution():
     collection = FakeCollection([
         {
             "_id": "mongo-id-legacy",
@@ -292,7 +291,6 @@ async def test_get_geojson_accepts_legacy_municipio_field_resolution():
             "escolaIdInep": 12345678,
             "municipioNome": "Joao Pessoa",
             "co_municipio": 2507507,
-            "estadoSigla": "PB",
             "dependenciaAdm": "Municipal",
             "tipoLocalizacao": "Urbana",
             "indicadores": {"ideb": 5.0},
@@ -301,38 +299,7 @@ async def test_get_geojson_accepts_legacy_municipio_field_resolution():
     ])
     repository = MongoSchoolRepository(collection=collection)
 
-    result = await repository.get_geojson(sg_uf=["PB"])
+    result = await repository.get_paraiba_geojson()
 
     feature = result["features"][0]
     assert feature["properties"]["municipioIdIbge"] == "2507507"
-
-
-@pytest.mark.asyncio
-async def test_get_geojson_uses_separate_cache_entries_for_each_uf_filter():
-    repository = MongoSchoolRepository(collection=FakeCollection([]))
-
-    await repository.get_geojson(sg_uf=["PB"])
-    await repository.get_geojson(sg_uf=["PE"])
-
-    assert set(repository._geojson_cache) == {"PB:__all__", "PE:__all__"}
-
-
-@pytest.mark.asyncio
-async def test_geojson_indexes_use_generic_names():
-    class IndexCollection(FakeCollection):
-        def __init__(self):
-            super().__init__([])
-            self.index_names = []
-
-        async def create_index(self, fields, **kwargs):
-            self.index_names.append(kwargs["name"])
-
-    collection = IndexCollection()
-    repository = MongoSchoolRepository(collection=collection)
-
-    await repository._ensure_geojson_indexes()
-
-    assert collection.index_names == [
-        "idx_geojson_municipio",
-        "idx_geojson_municipio_legacy",
-    ]
