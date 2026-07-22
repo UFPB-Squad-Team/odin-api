@@ -7,7 +7,7 @@ class ITerritorialAggregationRepository(ABC):
     async def get_cities(
         self,
         co_municipio: str | None = None,
-        sg_uf: str | None = None,
+        sg_uf: str | list[str] | None = None,
         include_geometria: bool = False,
     ) -> dict[str, Any]:
         """Returns consolidated city aggregates as GeoJSON FeatureCollection."""
@@ -19,6 +19,7 @@ class ITerritorialAggregationRepository(ABC):
         municipio_id_ibge: str,
         bairro: str | None = None,
         include_geometria: bool = False,
+        sg_uf: str | list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Returns neighborhood documents for a municipality using bairro_indicadores as primary source, including cd_municipio-compatible documents."""
         ...
