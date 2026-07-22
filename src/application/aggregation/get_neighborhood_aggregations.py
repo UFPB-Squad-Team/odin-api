@@ -15,10 +15,12 @@ class GetNeighborhoodAggregations:
         municipio_id_ibge: str,
         bairro: str | None = None,
         include_geometria: bool = False,
+        sg_uf: str | list[str] | None = None,
     ) -> list[dict[str, Any]]:
         NeighborhoodValidator(municipio_id_ibge)
         return await self.repository.get_by_municipio(
             municipio_id_ibge=municipio_id_ibge,
             bairro=bairro,
+            sg_uf=sg_uf,
             include_geometria=include_geometria,
         )

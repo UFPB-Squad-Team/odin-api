@@ -12,7 +12,7 @@ class GetCityAggregations:
     async def execute(
         self,
         co_municipio: str | None = None,
-        sg_uf: str | None = None,
+        sg_uf: str | list[str] | None = None,
         include_geometria: bool = False,
     ) -> dict[str, Any]:
         return await self.repository.get_cities(
