@@ -67,5 +67,9 @@ class StateSummary(BaseModel):
 
     sg_uf: str = Field(..., description="Sigla da Unidade Federativa (ex: PB)")
     estado: str | None = Field(default=None, description="Nome completo do estado")
+    total_municipios: int = Field(
+        default=0,
+        description="Total de municípios considerados na agregação",
+    )
     educacao: EducacaoStateStats
     socioeconomico: SocioeconomicoStateStats
