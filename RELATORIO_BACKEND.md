@@ -359,7 +359,7 @@ Todos os endpoints estão sob o prefixo **`/api/v1`**.
 | **Descrição** | Resumo estadual com indicadores educacionais e socioeconômicos agregados de todos os municípios |
 | **Collection** | `municipio_indicadores` |
 | **Parâmetros Path** | `sg_uf` (2 chars, ex: PB) |
-| **Resposta** | `StateSummary` com: `sg_uf`, `estado`, `educacao` (30+ indicadores com médias ponderadas), `socioeconomico` (população total, taxa desemprego média) |
+| **Resposta** | `StateSummary` com: `sg_uf`, `estado`, `total_municipios`, `educacao` (30+ indicadores com médias ponderadas), `socioeconomico` (população total, taxa desemprego média) |
 | **Cálculo educação** | Infraestrutura: média ponderada por nº de escolas. Indicadores acadêmicos: média ponderada por nº de alunos |
 | **Cálculo socioeconômico** | Média ponderada por população |
 | **Erro** | 404 se não houver dados para o estado |
