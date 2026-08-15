@@ -38,7 +38,9 @@ async def universal_search(
         ..., min_length=2, description="Texto de busca (mínimo 2 caracteres)"
     ),
     sg_uf: str | None = Query(None, description="Filtrar por UF"),
-    estado_sigla: str | None = Query(None, description="Filtrar por estado (ex: PB, PE)"),
+    estado_sigla: str | None = Query(
+        None, description="Filtrar por estado (ex: PB, PE)"
+    ),
     municipio_id: str | None = Query(None, description="Restringir a um município"),
     limit: int = Query(20, ge=1, le=20, description="Máximo de sugestões retornadas"),
     use_case: UniversalSearchUseCase = Depends(get_universal_search_use_case),
@@ -69,4 +71,3 @@ async def universal_search(
         total=result.total,
         query=result.query,
     )
-
