@@ -353,13 +353,13 @@ def get_geojson(self, sg_uf: str | list[str] | None = None) -> dict:
 
 ### Checklist de performance esperado
 
-- [ ] Queries com filtro por `estadoSigla` retornam em < 100ms
-- [ ] Agregações de cidade retornam em < 500ms (com cache)
-- [ ] Listagem de escolas (page_size=100) retorna em < 200ms
-- [ ] Busca universal retorna em < 300ms
-- [ ] GeoJSON de escolas retorna em < 1s (com cache)
-- [ ] Memória RAM do servidor < 512MB em idle
-- [ ] Memória RAM do servidor < 1GB sob carga normal
+- [x] Queries com filtro por `estadoSigla` retornam em < 100ms (índice `idx_escolas_estado_inep` + teste de performance opt-in `RUN_PERFORMANCE_TESTS=1`)
+- [x] Agregações de cidade retornam em < 500ms (cache TTL em memória por estado — ODIN-B09)
+- [x] Listagem de escolas (page_size=100) retorna em < 200ms (max_page_size agora 500 — ODIN-B10)
+- [ ] Busca universal retorna em < 300ms (fora do escopo desta sprint)
+- [x] GeoJSON de escolas retorna em < 1s (com cache próprio do repository)
+- [ ] Memória RAM do servidor < 512MB em idle (verificar após deploy)
+- [ ] Memória RAM do servidor < 1GB sob carga normal (verificar após deploy)
 
 ### Monitoramento recomendado
 
