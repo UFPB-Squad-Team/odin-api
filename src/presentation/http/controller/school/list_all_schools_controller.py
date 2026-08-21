@@ -40,6 +40,7 @@ class ListAllSchoolsController:
         search_term: str | None = None,
         municipio: str | None = None,
         municipio_id: str | None = None,
+        estado_sigla: List[str] | None = None,
         dependencia_adm: List[str] | None = None,
         tipo_localizacao: List[str] | None = None,
         fuzzy_search: bool = False,
@@ -60,6 +61,7 @@ class ListAllSchoolsController:
             search_term=search_term,
             municipio=municipio,
             municipio_id=municipio_id,
+            estado_sigla=estado_sigla,
             dependencia_adm=dependencia_adm,
             tipo_localizacao=tipo_localizacao,
             fuzzy_search=fuzzy_search,
@@ -81,6 +83,10 @@ async def list_all_schools_endpoint(
     municipio: str | None = Query(None, description="Nome do município"),
     municipio_id: str | None = Query(
         None, description="Código IBGE do município (7 dígitos)"
+    ),
+    estado_sigla: List[str] | None = Query(
+    None,
+    description="Filtro por sigla do estado (ex: 'PB', 'PE')",
     ),
     dependencia_adm: List[str] | None = Query(
         None,
@@ -112,6 +118,7 @@ async def list_all_schools_endpoint(
         search_term=search,
         municipio=municipio,
         municipio_id=municipio_id,
+        estado_sigla=estado_sigla,
         dependencia_adm=dependencia_adm,
         tipo_localizacao=tipo_localizacao,
         fuzzy_search=fuzzy_search,

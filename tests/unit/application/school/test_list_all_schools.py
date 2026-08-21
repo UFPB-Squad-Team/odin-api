@@ -76,3 +76,75 @@ async def test_execute_keeps_existing_filters_when_optional_search_params_are_mi
     assert forwarded_query.filters == [
         QueryFilter(field="estado_sigla", operator="eq", value="PB")
     ]
+
+@pytest.mark.asyncio
+async def test_execute_applies_estado_sigla_as_in_filter():
+    repository = Mock()
+    repository.find_paginated = AsyncMock(
+        return_value=PaginatedResponse(
+            page=1,
+            page_size=10,
+            total_items=0,
+            items=[],
+        )
+    )
+
+    use_case = ListAllSchools(school_repository=repository)
+
+    dto = ListSchoolsDTO(
+        query=QueryOptions(),
+        estado_sigla=["PB", "PE"],
+    )
+
+    await use_case.execute(dto)
+
+    forwarded_query = repository.find_paginated.await_args.args[0]
+
+    assert QueryFilter(
+        field="estado_sigla",
+        operator="in",
+        value=["PB", "PE"],
+    ) in forwarded_query.filters
+
+@pytest.mark.asyncio
+async def test_execute_combines_estado_sigla_with_other_filters():
+    repository = Mock()
+    repository.find_paginated = AsyncMock(
+        return_value=PaginatedResponse(
+            page=1,
+            page_size=10,
+            total_items=0,
+            items=[],
+        )
+    )
+
+    use_case = ListAllSchools(school_repository=repository)
+
+    dto = ListSchoolsDTO(
+        query=QueryOptions(),
+        estado_sigla=["PB", "PE"],
+        dependencia_adm=["Municipal"],
+        tipo_localizacao=["Urbana"],
+    )
+
+    await use_case.execute(dto)
+
+    forwarded_query = repository.find_paginated.await_args.args[0]
+
+    assert forwarded_query.filters == [
+        QueryFilter(
+            field="estado_sigla",
+            operator="in",
+            value=["PB", "PE"],
+        ),
+        QueryFilter(
+            field="dependencia_adm",
+            operator="in",
+            value=["Municipal"],
+        ),
+        QueryFilter(
+            field="tipo_localizacao",
+            operator="in",
+            value=["Urbana"],
+        ),
+    ]

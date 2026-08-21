@@ -10,6 +10,7 @@ class ListSchoolsDTO:
     search_term: Optional[str] = None
     municipio: Optional[str] = None
     municipio_id: Optional[str] = None
+    estado_sigla: Optional[List[str]] = None
     dependencia_adm: Optional[List[str]] = None
     tipo_localizacao: Optional[List[str]] = None
     fuzzy_search: bool = False
