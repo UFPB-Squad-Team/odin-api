@@ -155,9 +155,11 @@ Todas as variáveis são carregadas via `pydantic-settings` com validação auto
 | `ENVIRONMENT` | string | `development` | Ambiente (`development`, `staging`, `production`) |
 | `LOG_LEVEL` | string | `info` | Nível de log (`debug`, `info`, `warning`, `error`) |
 | `CORS_ALLOWED_ORIGINS` | string | `http://localhost:3000` | Origens CORS (separadas por vírgula) |
-| `MAX_PAGE_SIZE` | int | `100` | Tamanho máximo de página na paginação |
+| `MAX_PAGE_SIZE` | int | `500` | Tamanho máximo de página na paginação |
 | `MAX_OFFSET_RECORDS` | int | `50000` | Offset máximo permitido |
 | `USE_ESTIMATED_TOTAL` | bool | `true` | Usar contagem estimada para listas sem filtro |
+| `AGGREGATION_CACHE_TTL_SECONDS` | int | `300` | TTL (segundos) do cache em memória de agregações |
+| `AGGREGATION_CACHE_MAX_KEYS` | int | `512` | Máximo de chaves no cache em memória de agregações |
 | `WEB_CONCURRENCY` | int | `4` | Número de workers Gunicorn |
 | `GUNICORN_TIMEOUT` | int | `120` | Timeout dos workers (segundos) |
 | `MAX_REQUESTS` | int | `1000` | Requests antes de reciclar worker |

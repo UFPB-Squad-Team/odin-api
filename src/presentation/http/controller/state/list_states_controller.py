@@ -16,7 +16,7 @@ def get_use_case() -> ListStatesUseCase:
 @router.get(
     "/estados",
     response_model=List[State],
-    description="Lista os estados únicos que possuem dados carregados.",
+    description="Lista os estados da região Nordeste que possuem dados carregados.",
 )
 async def list_states(
     q: Optional[str] = Query(

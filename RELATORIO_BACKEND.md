@@ -178,7 +178,7 @@ Todos os endpoints estão sob o prefixo **`/api/v1`**.
 | **Rota** | `/api/v1/schools` (alias: `/api/v1/all`) |
 | **Descrição** | Listagem paginada de escolas com filtros dinâmicos, ordenação e projeção de campos |
 | **Collection** | `escolas` |
-| **Parâmetros Query** | `page` (int, default 1), `page_size` (int, default 10, max 100), `search` (busca por nome), `municipio` (filtro por nome de município), `municipio_id` (filtro por código IBGE), `cursor` (paginação cursor-based), `sort` (campo com prefixo `-` para desc), `fields` (projeção CSV), `filter[campo__operador]` (filtros dinâmicos) |
+| **Parâmetros Query** | `page` (int, default 1), `page_size` (int, default 10, max 500), `search` (busca por nome), `municipio` (filtro por nome de município), `municipio_id` (filtro por código IBGE), `cursor` (paginação cursor-based), `sort` (campo com prefixo `-` para desc), `fields` (projeção CSV), `filter[campo__operador]` (filtros dinâmicos) |
 | **Filtros permitidos** | `escola_id_inep`, `escola_nome`, `municipio_nome`, `estado_sigla`, `dependencia_adm`, `tipo_localizacao`, `municipio_id_ibge`, `bairro` |
 | **Operadores** | `eq`, `ne`, `in`, `nin`, `gt`, `gte`, `lt`, `lte`, `contains`, `startswith`, `endswith` |
 | **Resposta** | `{ schools: School[], total_items: int, page: int, page_size: int, next_cursor: str\|null }` |
@@ -359,7 +359,7 @@ Todos os endpoints estão sob o prefixo **`/api/v1`**.
 | **Descrição** | Resumo estadual com indicadores educacionais e socioeconômicos agregados de todos os municípios |
 | **Collection** | `municipio_indicadores` |
 | **Parâmetros Path** | `sg_uf` (2 chars, ex: PB) |
-| **Resposta** | `StateSummary` com: `sg_uf`, `estado`, `educacao` (30+ indicadores com médias ponderadas), `socioeconomico` (população total, taxa desemprego média) |
+| **Resposta** | `StateSummary` com: `sg_uf`, `estado`, `total_municipios`, `educacao` (30+ indicadores com médias ponderadas), `socioeconomico` (população total, taxa desemprego média) |
 | **Cálculo educação** | Infraestrutura: média ponderada por nº de escolas. Indicadores acadêmicos: média ponderada por nº de alunos |
 | **Cálculo socioeconômico** | Média ponderada por população |
 | **Erro** | 404 se não houver dados para o estado |
@@ -535,9 +535,13 @@ ENVIRONMENT=development   # development | staging | production
 CORS_ALLOWED_ORIGINS="http://localhost:3000"
 
 # Pagination
-MAX_PAGE_SIZE=100
+MAX_PAGE_SIZE=500
 MAX_OFFSET_RECORDS=50000
 USE_ESTIMATED_TOTAL=true
+
+# Aggregation cache
+AGGREGATION_CACHE_TTL_SECONDS=300
+AGGREGATION_CACHE_MAX_KEYS=512
 ```
 
 ### 7.2 AppConfig (Dataclass)
@@ -549,7 +553,7 @@ class AppConfig:
     environment: str                             # default "development"
     mongo_uri: str                               # OBRIGATÓRIO
     database_name: str                           # OBRIGATÓRIO
-    max_page_size: int                           # default 100
+    max_page_size: int                           # default 500
     max_offset_records: int                      # default 50000
     use_estimated_total_for_unfiltered_lists: bool  # default true
     cors_origins: list[str]                      # parsed de CSV
