@@ -51,6 +51,14 @@ class ListAllSchools:
                     value=dto.municipio_id,
                 )
             )
+        if dto.estado_sigla:
+            filters.append(
+                QueryFilter(
+                    field="estado_sigla",
+                    operator="in",
+                    value=dto.estado_sigla,
+                )
+            )
 
         if dto.dependencia_adm:
             filters.append(

@@ -141,6 +141,41 @@ async def test_school_list_route_returns_paginated_payload(monkeypatch):
     assert payload["next_cursor"] is None
     assert payload["schools"][0]["escola_nome"] == "Escola A"
 
+@pytest.mark.asyncio
+async def test_school_list_route_accepts_multiple_estado_sigla(monkeypatch):
+    async def fake_connect():
+        return True
+
+    async def fake_disconnect():
+        return None
+
+    from src.infrastructure.database.config.connect_db import mongodb
+
+    monkeypatch.setattr(mongodb, "connect", fake_connect)
+    monkeypatch.setattr(mongodb, "disconnect", fake_disconnect)
+
+    fake_use_case = FakeListAllSchoolsUseCase()
+
+    app.dependency_overrides[get_list_all_schools_use_case] = (
+        lambda: fake_use_case
+    )
+
+    transport = httpx.ASGITransport(app=app)
+
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://test",
+    ) as client:
+        response = await client.get(
+            "/api/v1/schools?estado_sigla=PB&estado_sigla=PE"
+        )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert fake_use_case.received_dto.estado_sigla == ["PB", "PE"]
+
+
 
 @pytest.mark.asyncio
 async def test_school_list_route_accepts_large_page_size(monkeypatch):
