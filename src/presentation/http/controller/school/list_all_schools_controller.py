@@ -85,8 +85,8 @@ async def list_all_schools_endpoint(
         None, description="Código IBGE do município (7 dígitos)"
     ),
     estado_sigla: List[str] | None = Query(
-    None,
-    description="Filtro por sigla do estado (ex: 'PB', 'PE')",
+        None,
+        description="Filtro por sigla do estado (ex: 'PB', 'PE')",
     ),
     dependencia_adm: List[str] | None = Query(
         None,
