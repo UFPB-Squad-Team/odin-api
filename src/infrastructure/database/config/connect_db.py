@@ -69,6 +69,47 @@ class MongoDB:
             name="idx_escolas_inep",
             background=True,
         )
+        await schools.create_index(
+            [
+                ("estadoSigla", ASCENDING),
+                ("escolaIdInep", ASCENDING),
+            ],
+            name="idx_escolas_estado_inep",
+            background=True,
+        )
+        # Municipality-first index for searches by municipio (optionally
+        # combined with a UF filter to disambiguate homonymous municipalities).
+        await self._create_or_replace_index(
+            schools,
+            [
+                ("municipioNome", ASCENDING),
+                ("estadoSigla", ASCENDING),
+            ],
+            "idx_escolas_municipio_estado",
+            collation={"locale": "pt", "strength": 1},
+        )
+        # Composite indexes for state+municipality+school lookups (GeoJSON and
+        # list queries). Same names as the lazy creation kept in
+        # MongoSchoolRepository._ensure_geojson_indexes() so both paths are
+        # idempotent.
+        await self._create_or_replace_index(
+            schools,
+            [
+                ("estadoSigla", ASCENDING),
+                ("municipioIdIbge", ASCENDING),
+                ("escolaIdInep", ASCENDING),
+            ],
+            "idx_geojson_municipio",
+        )
+        await self._create_or_replace_index(
+            schools,
+            [
+                ("estadoSigla", ASCENDING),
+                ("municipio_id_ibge", ASCENDING),
+                ("escolaIdInep", ASCENDING),
+            ],
+            "idx_geojson_municipio_legacy",
+        )
 
         # Build geospatial index only for valid coordinates.
         try:
@@ -123,6 +164,22 @@ class MongoDB:
                     bairros,
                     [(municipio_field, ASCENDING), (bairro_field, ASCENDING)],
                     f"idx_bairro_indicadores_{municipio_field}_{bairro_field}",
+                )
+
+        # UF filters on the aggregation collections. The `_uf_clause` used by
+        # MongoTerritorialAggregationRepository queries via `$or` across
+        # sg_uf / uf / estado_sigla, so each branch needs its own index.
+        aggregation_collections = {
+            "municipio_indicadores": municipios,
+            "bairro_indicadores": bairros,
+            "setor_indicadores": setores,
+        }
+        for collection_name, collection in aggregation_collections.items():
+            for uf_field in ("sg_uf", "uf", "estado_sigla"):
+                await self._create_or_replace_index(
+                    collection,
+                    [(uf_field, ASCENDING)],
+                    f"idx_{collection_name}_{uf_field}",
                 )
 
         try:

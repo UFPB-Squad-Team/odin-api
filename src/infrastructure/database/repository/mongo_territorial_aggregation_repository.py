@@ -29,13 +29,41 @@ class MongoTerritorialAggregationRepository(
         self.bairro_collection = bairro_collection
         self.setor_collection = setor_collection
 
+    @staticmethod
+    def _normalize_uf_filter(
+        sg_uf: str | list[str] | None,
+    ) -> str | list[str] | None:
+        if isinstance(sg_uf, str):
+            normalized = sg_uf.strip().upper()
+            return normalized or None
+
+        if not sg_uf:
+            return None
+
+        normalized_ufs = list(
+            dict.fromkeys(uf.strip().upper() for uf in sg_uf if uf.strip())
+        )
+        return normalized_ufs or None
+
+    @staticmethod
+    def _uf_clause(sg_uf: str | list[str]) -> dict[str, Any]:
+        value: str | dict[str, list[str]]
+        value = {"$in": sg_uf} if isinstance(sg_uf, list) else sg_uf
+        return {
+            "$or": [
+                {"sg_uf": value},
+                {"uf": value},
+                {"estado_sigla": value},
+            ]
+        }
+
     async def get_cities(
         self,
         co_municipio: str | None = None,
-        sg_uf: str | None = None,
+        sg_uf: str | list[str] | None = None,
         include_geometria: bool = False,
     ) -> dict[str, Any]:
-        normalized_uf = sg_uf.upper() if sg_uf else None
+        normalized_uf = self._normalize_uf_filter(sg_uf)
 
         if co_municipio:
             query: dict[str, Any] = {
@@ -50,13 +78,7 @@ class MongoTerritorialAggregationRepository(
                 query = {
                     "$and": [
                         query,
-                        {
-                            "$or": [
-                                {"sg_uf": normalized_uf},
-                                {"uf": normalized_uf},
-                                {"estado_sigla": normalized_uf},
-                            ]
-                        },
+                        self._uf_clause(normalized_uf),
                     ]
                 }
 
@@ -96,13 +118,7 @@ class MongoTerritorialAggregationRepository(
 
         list_query: dict[str, Any] = {}
         if normalized_uf:
-            list_query = {
-                "$or": [
-                    {"sg_uf": normalized_uf},
-                    {"uf": normalized_uf},
-                    {"estado_sigla": normalized_uf},
-                ]
-            }
+            list_query = self._uf_clause(normalized_uf)
 
         docs = await self.municipio_collection.find(list_query).to_list(length=None)
         cities = [
@@ -126,10 +142,13 @@ class MongoTerritorialAggregationRepository(
         municipio_id_ibge: str,
         bairro: str | None = None,
         include_geometria: bool = False,
+        sg_uf: str | list[str] | None = None,
     ) -> list[dict[str, Any]]:
+        normalized_uf = self._normalize_uf_filter(sg_uf)
         primary_docs = await self._find_neighborhood_docs(
             municipio_id_ibge=municipio_id_ibge,
             bairro=bairro,
+            sg_uf=normalized_uf,
         )
 
         if primary_docs:
@@ -146,6 +165,7 @@ class MongoTerritorialAggregationRepository(
         fallback_docs = await self._aggregate_neighborhoods_from_setor(
             co_municipio=municipio_id_ibge,
             bairro=bairro,
+            sg_uf=normalized_uf,
         )
         return [
             MongoNeighborhoodMapper.from_doc(
@@ -531,6 +551,7 @@ class MongoTerritorialAggregationRepository(
         *,
         municipio_id_ibge: str,
         bairro: str | None = None,
+        sg_uf: str | list[str] | None = None,
     ) -> list[dict[str, Any]]:
         query: dict[str, Any] = {
             "$and": [
@@ -545,6 +566,9 @@ class MongoTerritorialAggregationRepository(
                 },
             ]
         }
+
+        if sg_uf:
+            query["$and"].append(self._uf_clause(sg_uf))
 
         if bairro:
             query = {
@@ -608,7 +632,7 @@ class MongoTerritorialAggregationRepository(
         self,
         *,
         co_municipio: str,
-        sg_uf: str | None,
+        sg_uf: str | list[str] | None,
     ) -> list[dict[str, Any]]:
         match_conditions: list[dict[str, Any]] = [
             {
@@ -619,15 +643,7 @@ class MongoTerritorialAggregationRepository(
             }
         ]
         if sg_uf:
-            match_conditions.append(
-                {
-                    "$or": [
-                        {"sg_uf": sg_uf},
-                        {"uf": sg_uf},
-                        {"estado_sigla": sg_uf},
-                    ]
-                }
-            )
+            match_conditions.append(self._uf_clause(sg_uf))
 
         pipeline = [
             {"$match": {"$and": match_conditions}},
@@ -760,21 +776,32 @@ class MongoTerritorialAggregationRepository(
         *,
         co_municipio: str,
         bairro: str | None,
+        sg_uf: str | list[str] | None = None,
     ) -> list[dict[str, Any]]:
         municipio_match_values: list[Any] = [co_municipio]
         if co_municipio.isdigit():
             municipio_match_values.append(int(co_municipio))
 
+        match_conditions: list[dict[str, Any]] = [
+            {
+                "$or": [
+                    {"co_municipio": {"$in": municipio_match_values}},
+                    {"municipioIdIbge": {"$in": municipio_match_values}},
+                    {"municipio_id_ibge": {"$in": municipio_match_values}},
+                    {"idIbge": {"$in": municipio_match_values}},
+                ]
+            }
+        ]
+        if sg_uf:
+            match_conditions.append(self._uf_clause(sg_uf))
+
         pipeline = [
             {
-                "$match": {
-                    "$or": [
-                        {"co_municipio": {"$in": municipio_match_values}},
-                        {"municipioIdIbge": {"$in": municipio_match_values}},
-                        {"municipio_id_ibge": {"$in": municipio_match_values}},
-                        {"idIbge": {"$in": municipio_match_values}},
-                    ]
-                }
+                "$match": (
+                    match_conditions[0]
+                    if len(match_conditions) == 1
+                    else {"$and": match_conditions}
+                )
             },
             {
                 "$project": {

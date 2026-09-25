@@ -1,6 +1,7 @@
 from typing import List
 
 from src.domain.entities.city_aggregation import CityAggregation
+from src.domain.entities.state import get_state_name
 from src.domain.entities.state_summary import (
     EducacaoStateStats,
     SocioeconomicoStateStats,
@@ -130,8 +131,11 @@ class StateSummaryFactory:
         cls, sg_uf: str, cities: List[CityAggregation]
     ) -> StateSummary:
         """Método público que constrói o objeto final."""
+        normalized_sg_uf = sg_uf.strip().upper()
         return StateSummary(
-            sg_uf=sg_uf.upper(),
+            sg_uf=normalized_sg_uf,
+            estado=get_state_name(normalized_sg_uf),
+            total_municipios=len(cities),
             educacao=cls._calc_educacao(cities),
             socioeconomico=cls._calc_socioeconomico(cities),
         )

@@ -1,6 +1,7 @@
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import StringConstraints
 
 from src.application.aggregation.get_city_aggregations import GetCityAggregations
 from src.application.aggregation.get_neighborhood_aggregations import (
@@ -17,6 +18,16 @@ from src.presentation.http.schemas.aggregation_schema import (
 )
 
 router = APIRouter()
+
+UFCode = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        to_upper=True,
+        min_length=2,
+        max_length=2,
+    ),
+]
 
 
 def _to_neighborhood_feature_collection(
@@ -108,11 +119,13 @@ async def get_city_aggregations(
         max_length=7,
         description="IBGE municipality code (7 digits). Primary data source: municipio_indicadores. Fallback to setor_indicadores if not found.",
     ),
-    sg_uf: str | None = Query(
+    sg_uf: list[UFCode] | None = Query(
         default=None,
-        min_length=2,
-        max_length=2,
-        description="Optional UF filter (e.g., PB). Applied when listing cities and combined with municipioIdIbge when provided.",
+        description=(
+            "Optional UF filter. Repeat the query parameter to filter multiple "
+            "states (for example, `?sg_uf=PB&sg_uf=PE`). When omitted, "
+            "aggregations from all states are returned."
+        ),
     ),
     include_geometria: bool = Query(
         default=False,
@@ -122,7 +135,7 @@ async def get_city_aggregations(
 ):
     return await use_case.execute(
         co_municipio=municipioIdIbge,
-        sg_uf=sg_uf.upper() if sg_uf else None,
+        sg_uf=sg_uf,
         include_geometria=include_geometria,
     )
 
@@ -158,6 +171,14 @@ async def get_neighborhood_aggregations(
         min_length=1,
         description="Optional neighborhood filter. Matches bairro, nm_bairro and nome_area.",
     ),
+    sg_uf: list[UFCode] | None = Query(
+        default=None,
+        description=(
+            "Optional UF filter. Repeat the query parameter to filter multiple "
+            "states (for example, `?sg_uf=PB&sg_uf=PE`). When omitted, no UF "
+            "filter is applied."
+        ),
+    ),
     include_geometria: bool = Query(
         default=False,
         description="If true, returns full geometria (MultiPolygon/Point). Default false to reduce payload size.",
@@ -176,6 +197,7 @@ async def get_neighborhood_aggregations(
     result = await use_case.execute(
         municipio_id_ibge=resolved_municipio_id,
         bairro=bairro,
+        sg_uf=sg_uf,
         include_geometria=include_geometria,
     )
 

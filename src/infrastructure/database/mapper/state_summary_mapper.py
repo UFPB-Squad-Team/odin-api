@@ -63,7 +63,10 @@ class StateSummaryMapper:
                 ideb_iniciais=cls._extract_number(
                     educacao.get("mediaIdebAnosIniciais")
                 ),
-                ideb_finais=cls._extract_number(educacao.get("mediaIdebAnosFinals")),
+                ideb_finais=cls._extract_number(
+                    educacao.get("mediaIdebAnosFinals")
+                    or educacao.get("mediaIdebAnosFinais")
+                ),
                 ideb_ensino_medio=cls._extract_number(
                     educacao.get("mediaIdebEnsinoMedio")
                 ),

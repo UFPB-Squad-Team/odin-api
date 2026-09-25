@@ -29,9 +29,13 @@ class AppConfig(BaseSettings):
     database_name: str
 
     # Pagination
-    max_page_size: int = 100
+    max_page_size: int = 500
     max_offset_records: int = 50000
     use_estimated_total_for_unfiltered_lists: bool = True
+
+    # Aggregation cache (in-memory, TTL-based)
+    aggregation_cache_ttl_seconds: int = 300
+    aggregation_cache_max_keys: int = 512
 
     # CORS
     cors_allowed_origins: str = "http://localhost:3000"

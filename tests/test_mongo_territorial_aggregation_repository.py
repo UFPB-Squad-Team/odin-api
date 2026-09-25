@@ -195,6 +195,52 @@ async def test_get_cities_filters_list_by_sg_uf():
 
 
 @pytest.mark.asyncio
+async def test_get_cities_filters_by_multiple_ufs():
+    municipio_collection = FakeCollection(find_docs=[])
+    repository = MongoTerritorialAggregationRepository(
+        municipio_collection=municipio_collection,
+        bairro_collection=FakeCollection(),
+        setor_collection=FakeCollection(),
+    )
+
+    await repository.get_cities(sg_uf=["pb", " PE ", "pb"])
+
+    assert municipio_collection.last_find_query == {
+        "$or": [
+            {"sg_uf": {"$in": ["PB", "PE"]}},
+            {"uf": {"$in": ["PB", "PE"]}},
+            {"estado_sigla": {"$in": ["PB", "PE"]}},
+        ]
+    }
+
+
+@pytest.mark.asyncio
+async def test_get_by_municipio_filters_primary_and_fallback_by_multiple_ufs():
+    bairro_collection = FakeCollection(find_docs=[])
+    setor_collection = FakeCollection()
+    repository = MongoTerritorialAggregationRepository(
+        municipio_collection=FakeCollection(),
+        bairro_collection=bairro_collection,
+        setor_collection=setor_collection,
+    )
+
+    await repository.get_by_municipio(
+        municipio_id_ibge="2507507",
+        sg_uf=["pb", "pe"],
+    )
+
+    uf_clause = {
+        "$or": [
+            {"sg_uf": {"$in": ["PB", "PE"]}},
+            {"uf": {"$in": ["PB", "PE"]}},
+            {"estado_sigla": {"$in": ["PB", "PE"]}},
+        ]
+    }
+    assert uf_clause in bairro_collection.last_find_query["$and"]
+    assert uf_clause in setor_collection.last_aggregate_pipeline[0]["$match"]["$and"]
+
+
+@pytest.mark.asyncio
 async def test_get_by_municipio_returns_primary_bairro_collection():
     municipio_collection = FakeCollection()
     bairro_collection = FakeCollection(
