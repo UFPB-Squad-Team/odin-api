@@ -51,21 +51,24 @@ class TerritorialAggregationMapper:
         return default
 
     @classmethod
-    def _flatten_lon_lat_pairs(cls, value: Any) -> list[tuple[float, float]]:
-        pairs: list[tuple[float, float]] = []
-
+    def _iter_lon_lat_pairs(cls, value):
         if isinstance(value, (list, tuple)):
             if len(value) >= 2 and not isinstance(value[0], (list, tuple)):
-                lon = cls._as_float(value[0])
-                lat = cls._as_float(value[1])
+                lon, lat = cls._as_float(value[0]), cls._as_float(value[1])
                 if lon is not None and lat is not None:
-                    pairs.append((lon, lat))
-                return pairs
-
+                    yield lon, lat
+                return
             for item in value:
-                pairs.extend(cls._flatten_lon_lat_pairs(item))
+                yield from cls._iter_lon_lat_pairs(item)
 
-        return pairs
+    @classmethod
+    def _average_coordinates(cls, value):
+        lon_sum, lat_sum, count = 0, 0, 0
+        for lon, lat in cls._iter_lon_lat_pairs(value):
+            lon_sum += lon
+            lat_sum += lat
+            count += 1
+        return (lon_sum / count, lat_sum / count) if count else None
 
     @classmethod
     def _extract_coordinates(cls, doc: dict[str, Any]) -> tuple[float, float] | None:
@@ -79,18 +82,12 @@ class TerritorialAggregationMapper:
         )
 
         if isinstance(geometry, dict):
-            coords = geometry.get("coordinates")
-            pairs = cls._flatten_lon_lat_pairs(coords)
-            if pairs:
-                avg_lon = sum(item[0] for item in pairs) / len(pairs)
-                avg_lat = sum(item[1] for item in pairs) / len(pairs)
-                return (avg_lon, avg_lat)
-
-        pairs = cls._flatten_lon_lat_pairs(geometry)
-        if pairs:
-            avg_lon = sum(item[0] for item in pairs) / len(pairs)
-            avg_lat = sum(item[1] for item in pairs) / len(pairs)
-            return (avg_lon, avg_lat)
+            average = cls._average_coordinates(geometry.get("coordinates"))
+            if average:
+                return average
+        average = cls._average_coordinates(geometry)
+        if average:
+            return average
 
         lon = cls._as_float(cls._pick(doc, "longitude", "lon", "avg_lon"))
         lat = cls._as_float(cls._pick(doc, "latitude", "lat", "avg_lat"))

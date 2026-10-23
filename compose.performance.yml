@@ -1,0 +1,25 @@
+services:
+  mongo:
+    image: mongo:7
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
+    ports: ["127.0.0.1:27018:27017"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  api:
+    build: .
+    container_name: odin-perf-api
+    mem_limit: 512m
+    cpus: 0.1
+    ports: ["127.0.0.1:8000:8000"]
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      DATABASE_NAME: odin_perf_capacity
+      WEB_CONCURRENCY: "1"
+      ENVIRONMENT: production
+      GZIP_ENABLED: "false"
+    depends_on:
+      mongo:
+        condition: service_healthy

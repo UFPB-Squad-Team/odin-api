@@ -30,6 +30,7 @@ async def _http_exception_handler(_: Request, exc: HTTPException) -> JSONRespons
     return JSONResponse(
         status_code=exc.status_code,
         content=_build_error_payload(error_code, str(exc.detail)),
+        headers=exc.headers,
     )
 
 

@@ -1,4 +1,4 @@
-"""Validates the multi-state index set created at startup (ODIN-B08).
+"""Validates the multi-state index set created by provisioning (ODIN-B08).
 
 Uses fake collections that capture ``create_index`` calls so the tests run
 without a real MongoDB connection.
@@ -118,3 +118,78 @@ async def test_ensure_indexes_creates_uf_indexes_on_aggregation_collections():
         assert f"idx_{collection_name}_sg_uf" in names
         assert f"idx_{collection_name}_uf" in names
         assert f"idx_{collection_name}_estado_sigla" in names
+
+
+@pytest.mark.asyncio
+async def test_connect_bounds_pool_and_does_not_provision_indexes(monkeypatch):
+    from src.infrastructure.database.config import connect_db
+
+    options = {}
+
+    class Client:
+        def __init__(self, uri, **kwargs):
+            options.update(kwargs)
+            self.admin = self
+
+        def get_database(self, name):
+            return FakeDatabase()
+
+        async def command(self, command):
+            assert command == "ping"
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(connect_db, "AsyncIOMotorClient", Client)
+    mongo = MongoDB()
+
+    async def forbidden():
+        pytest.fail("startup must not create indexes")
+
+    monkeypatch.setattr(mongo, "_ensure_indexes", forbidden)
+    assert await mongo.connect()
+    assert options["minPoolSize"] == 0
+    assert options["maxPoolSize"] == 10
+    await mongo.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_provisioning_reuses_equivalent_index_without_dropping():
+    from pymongo.errors import OperationFailure
+
+    class IndexCursor:
+        async def to_list(self, length):
+            return [{"name": "old_name", "key": {"sg_uf": 1}}]
+
+    class Collection:
+        async def create_index(self, *args, **kwargs):
+            raise OperationFailure("IndexOptionsConflict", code=85)
+
+        def list_indexes(self):
+            return IndexCursor()
+
+        async def drop_index(self, *args):
+            pytest.fail("provisioning must not drop indexes")
+
+    await MongoDB()._create_or_replace_index(Collection(), [("sg_uf", 1)], "new_name")
+
+
+@pytest.mark.asyncio
+async def test_incompatible_index_options_fail_without_dropping():
+    from pymongo.errors import OperationFailure
+
+    class IndexCursor:
+        async def to_list(self, length):
+            return [{"name": "old_name", "key": {"sg_uf": 1}, "unique": False}]
+
+    class Collection:
+        async def create_index(self, *args, **kwargs):
+            raise OperationFailure("IndexOptionsConflict", code=85)
+
+        def list_indexes(self):
+            return IndexCursor()
+
+    with pytest.raises(RuntimeError, match="manual review"):
+        await MongoDB()._create_or_replace_index(
+            Collection(), [("sg_uf", 1)], "new_name", unique=True
+        )

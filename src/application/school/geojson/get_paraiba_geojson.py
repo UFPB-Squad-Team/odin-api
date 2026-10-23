@@ -1,3 +1,4 @@
+from contextlib import aclosing
 from typing import Any, Dict
 
 from src.domain.repository.school_repository import ISchoolRepository
@@ -11,3 +12,10 @@ class GetParaibaGeoJson:
         return await self.school_repository.get_paraiba_geojson(
             municipio_id=municipio_id
         )
+
+    async def iter_items(self, municipio_id=None):
+        async with aclosing(
+            self.school_repository.iter_geojson_features(municipio_id=municipio_id)
+        ) as items:
+            async for item in items:
+                yield item

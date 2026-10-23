@@ -7,13 +7,18 @@ from src.application.aggregation.get_city_aggregations import GetCityAggregation
 from src.application.aggregation.get_neighborhood_aggregations import (
     GetNeighborhoodAggregations,
 )
+from src.infrastructure.cache.aggregation_cache import uf_cache_key
+from src.infrastructure.database.config.app_config import config
 from src.presentation.http.controller.aggregation.callable.aggregation_callable import (
     get_city_aggregations_use_case,
     get_neighborhood_aggregations_use_case,
 )
+from src.presentation.http.large_json import iter_use_case, large_json, response_key
 from src.presentation.http.schemas.aggregation_schema import (
+    CityAggregationFeature,
     CityAggregationFeatureCollection,
     MongoNeighborhoodAggregation,
+    NeighborhoodAggregationFeature,
     NeighborhoodAggregationFeatureCollection,
 )
 
@@ -133,10 +138,17 @@ async def get_city_aggregations(
     ),
     use_case: GetCityAggregations = Depends(get_city_aggregations_use_case),
 ):
-    return await use_case.execute(
-        co_municipio=municipioIdIbge,
-        sg_uf=sg_uf,
-        include_geometria=include_geometria,
+    params: dict[str, Any] = {
+        "co_municipio": municipioIdIbge,
+        "sg_uf": sg_uf,
+        "include_geometria": include_geometria,
+    }
+    key_params = {**params, "sg_uf": uf_cache_key(sg_uf)}
+    return await large_json.response(
+        response_key("cities", **key_params),
+        lambda: iter_use_case(use_case, **params),
+        CityAggregationFeature,
+        ttl=config.aggregation_cache_ttl_seconds,
     )
 
 
@@ -194,14 +206,26 @@ async def get_neighborhood_aggregations(
             detail="One of municipio_id or municipioIdIbge is required.",
         )
 
-    result = await use_case.execute(
-        municipio_id_ibge=resolved_municipio_id,
-        bairro=bairro,
-        sg_uf=sg_uf,
-        include_geometria=include_geometria,
+    params: dict[str, Any] = {
+        "municipio_id_ibge": resolved_municipio_id,
+        "bairro": bairro,
+        "sg_uf": sg_uf,
+        "include_geometria": include_geometria,
+    }
+
+    async def items():
+        async for item in iter_use_case(use_case, collection=False, **params):
+            if include_geometria:
+                yield _to_neighborhood_feature_collection([item])["features"][0]
+            else:
+                yield item
+
+    return await large_json.response(
+        response_key("neighborhoods", **{**params, "sg_uf": uf_cache_key(sg_uf)}),
+        items,
+        NeighborhoodAggregationFeature
+        if include_geometria
+        else MongoNeighborhoodAggregation,
+        collection=include_geometria,
+        ttl=config.aggregation_cache_ttl_seconds,
     )
-
-    if include_geometria:
-        return _to_neighborhood_feature_collection(result)
-
-    return result

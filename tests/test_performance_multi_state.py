@@ -16,6 +16,7 @@ import os
 import time
 
 import pytest
+import pytest_asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from src.domain.value_objects.query import QueryFilter, QueryOptions
@@ -53,11 +54,17 @@ def _school_doc(uf_index: int, uf: str, i: int) -> dict:
             "coordinates": [-34.0 + uf_index, -7.0 + uf_index * 0.1],
         },
         "endereco": {"bairro": "Centro"},
+        "indicadores": {"anoReferencia": 2025, "totalAlunos": 200, "ideb": 5.5},
+        "matriculas": {"totalAlunos": 200, "fundamentalTotal": 200},
+        "unrelated_census_payload": "x" * 4096,
     }
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def perf_database():
+    assert DATABASE_NAME.startswith(
+        "odin_perf_"
+    ), "Use an isolated odin_perf_* database"
     client = AsyncIOMotorClient(MONGODB_URI, serverSelectionTimeoutMS=10_000)
     db = client[DATABASE_NAME]
     schools = db["escolas"]
@@ -66,7 +73,7 @@ async def perf_database():
     chunk: list[dict] = []
     per_uf = TARGET_SCHOOLS // len(UFS)
     for uf_index, uf in enumerate(UFS):
-        for i in range(per_uf):
+        for i in range(per_uf + (1 if uf_index < TARGET_SCHOOLS % len(UFS) else 0)):
             chunk.append(_school_doc(uf_index, uf, i))
             if len(chunk) >= BATCH_SIZE:
                 await schools.insert_many(chunk)
@@ -95,29 +102,31 @@ def _assert_uses_index(explain: dict) -> None:
     ), "query uses COLLSCAN — expected an index (IXSCAN)"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_estado_sigla_query_uses_index_and_is_fast(perf_database):
-    schools = perf_database["escolas"]
-
-    explain = await schools.find({"estadoSigla": "PB"}).explain("executionStats")
-    _assert_uses_index(explain)
-    execution_ms = explain["executionStats"]["executionTimeMillis"]
-    assert execution_ms < 100, f"executionTimeMillis={execution_ms} >= 100ms"
-
-
-@pytest.mark.asyncio
-async def test_multi_uf_in_query_uses_index_and_is_fast(perf_database):
-    schools = perf_database["escolas"]
-
-    explain = await schools.find({"estadoSigla": {"$in": ["PB", "PE"]}}).explain(
-        "executionStats"
+    explain = await perf_database.command(
+        "explain",
+        {"find": "escolas", "filter": {"estadoSigla": "PB"}},
+        verbosity="executionStats",
     )
     _assert_uses_index(explain)
     execution_ms = explain["executionStats"]["executionTimeMillis"]
     assert execution_ms < 100, f"executionTimeMillis={execution_ms} >= 100ms"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
+async def test_multi_uf_in_query_uses_index_and_is_fast(perf_database):
+    explain = await perf_database.command(
+        "explain",
+        {"find": "escolas", "filter": {"estadoSigla": {"$in": ["PB", "PE"]}}},
+        verbosity="executionStats",
+    )
+    _assert_uses_index(explain)
+    execution_ms = explain["executionStats"]["executionTimeMillis"]
+    assert execution_ms < 100, f"executionTimeMillis={execution_ms} >= 100ms"
+
+
+@pytest.mark.asyncio(loop_scope="module")
 async def test_repository_state_filter_page_size_500_is_fast(perf_database):
     collection = perf_database["escolas"]
     repository = MongoSchoolRepository(collection=collection)
@@ -135,3 +144,95 @@ async def test_repository_state_filter_page_size_500_is_fast(perf_database):
     assert len(result.items) == 500
     assert result.total_items > 0
     assert elapsed_ms < 200, f"paginated estadoSigla query took {elapsed_ms:.1f}ms"
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_city_projection_preserves_coordinate_fallback_on_real_mongo(
+    perf_database,
+):
+    from src.infrastructure.database.mapper.territorial_aggregation_mapper import (
+        TerritorialAggregationMapper,
+    )
+    from src.infrastructure.database.repository.mongo_territorial_aggregation_repository import (
+        MongoTerritorialAggregationRepository,
+    )
+
+    polygon = {"type": "Polygon", "coordinates": [[[1, 1], [3, 1], [3, 3], [1, 1]]]}
+    documents = [
+        {
+            "municipioIdIbge": "2927408",
+            "centroide": {"type": "Point", "coordinates": [10, 20]},
+            "geometria": polygon,
+        },
+        {"municipioIdIbge": "2927408", "geometria": polygon},
+        {
+            "municipioIdIbge": "2927408",
+            "centroid": {},
+            "geometry": polygon,
+            "lon": 12,
+            "lat": 5,
+        },
+    ]
+    collection = perf_database["municipio_indicadores"]
+    inserted = await collection.insert_many(documents)
+    try:
+        for original in documents:
+            projected = await collection.find_one(
+                {"_id": original["_id"]},
+                MongoTerritorialAggregationRepository._city_projection(False),
+            )
+            assert TerritorialAggregationMapper.city_from_doc(
+                projected, source="municipio_indicadores"
+            ) == TerritorialAggregationMapper.city_from_doc(
+                original, source="municipio_indicadores"
+            )
+            if "centroide" in original or "centroid" in original:
+                assert "geometria" not in projected
+                assert "geometry" not in projected
+    finally:
+        await collection.delete_many({"_id": {"$in": inserted.inserted_ids}})
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_neighborhood_projection_keeps_geometry_needed_for_name_resolution(
+    perf_database,
+):
+    from src.infrastructure.database.repository.mongo_territorial_aggregation_repository import (
+        MongoTerritorialAggregationRepository,
+    )
+
+    polygon = {"type": "Polygon", "coordinates": [[[1, 1], [3, 1], [3, 3], [1, 1]]]}
+    documents = [
+        {"municipioIdIbge": "9999999", "bairro": "Centro", "geometria": polygon},
+        {
+            "municipioIdIbge": "9999999",
+            "bairro": "  ",
+            "nm_bairro": "Ignored",
+            "geometria": polygon,
+        },
+        {"municipioIdIbge": "9999999", "nm_bairro": "Nome", "geometria": polygon},
+        {
+            "municipioIdIbge": "9999999",
+            "bairro": 123,
+            "nm_bairro": "Ignored",
+            "geometria": polygon,
+        },
+    ]
+    collection = perf_database["bairro_indicadores"]
+    inserted = await collection.insert_many(documents)
+    repository = MongoTerritorialAggregationRepository(
+        perf_database["municipio_indicadores"],
+        collection,
+        perf_database["setor_indicadores"],
+    )
+    try:
+        projected = {
+            doc["_id"]: doc
+            async for doc in repository._iter_neighborhood_docs(
+                municipio_id_ibge="9999999"
+            )
+        }
+        for index, document in enumerate(documents):
+            assert ("geometria" in projected[document["_id"]]) == (index in (1, 3))
+    finally:
+        await collection.delete_many({"_id": {"$in": inserted.inserted_ids}})

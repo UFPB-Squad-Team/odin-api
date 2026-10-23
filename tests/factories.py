@@ -75,6 +75,17 @@ def build_school_document(document_id: str = "school-1"):
 
 
 class FakeCursor:
+    def batch_size(self, size):
+        self.batch_size_value = size
+        return self
+
+    async def close(self):
+        self.closed = True
+
+    async def __aiter__(self):
+        for doc in self.documents:
+            yield doc
+
     def __init__(self, documents):
         self.documents = list(documents)
         self.sort_args = None
@@ -101,6 +112,17 @@ class FakeCursor:
 
 
 class FakeAggregateCursor:
+    def batch_size(self, size):
+        self.batch_size_value = size
+        return self
+
+    async def close(self):
+        self.closed = True
+
+    async def __aiter__(self):
+        for doc in self.documents:
+            yield doc
+
     def __init__(self, documents):
         self.documents = list(documents)
 

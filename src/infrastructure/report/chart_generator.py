@@ -10,9 +10,9 @@ import io
 import logging
 
 import matplotlib
-import matplotlib.pyplot as plt
 
 matplotlib.use("Agg")  # Non-interactive backend for server-side rendering
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -81,11 +81,12 @@ def _get_figure(width: float = 6.5, height: float = 3.5) -> tuple[plt.Figure, pl
 
 def _fig_to_bytes(fig: plt.Figure) -> bytes:
     """Render a matplotlib figure to PNG bytes in memory."""
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0.2)
-    plt.close(fig)
-    buf.seek(0)
-    return buf.getvalue()
+    try:
+        with io.BytesIO() as buf:
+            fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0.2)
+            return buf.getvalue()
+    finally:
+        plt.close(fig)
 
 
 def generate_bar_chart(

@@ -4,9 +4,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 
 from src.infrastructure.database.config.app_config import config
 from src.infrastructure.database.config.connect_db import mongodb
+from src.infrastructure.resources import pdf_renderer
 from src.presentation.http.controller.aggregation.container import (
     container as aggregation_container,
 )
@@ -38,6 +40,7 @@ from src.presentation.http.controller.state.container import (
     container as state_container,
 )
 from src.presentation.http.controller.state.index import router as state_controller
+from src.presentation.http.large_json import large_json
 from src.presentation.http.middleware.global_exception_handler import (
     register_global_exception_handlers,
 )
@@ -122,9 +125,12 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("Failed to connect to database")
 
     logger.info("Application ready to serve requests")
-    yield
-
-    await mongodb.disconnect()
+    try:
+        yield
+    finally:
+        await large_json.close()
+        pdf_renderer.close()
+        await mongodb.disconnect()
     logger.info("Application shutdown complete")
 
 
@@ -145,6 +151,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
+
+if config.gzip_enabled:
+    app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=3)
 
 app.add_middleware(RequestIDMiddleware)
 

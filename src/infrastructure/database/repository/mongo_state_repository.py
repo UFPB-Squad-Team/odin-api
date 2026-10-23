@@ -1,4 +1,5 @@
 import unicodedata
+from contextlib import aclosing
 from typing import Any, List, Optional
 
 from src.domain.entities.city_aggregation import CityAggregation
@@ -6,6 +7,8 @@ from src.domain.entities.state import State
 from src.domain.repository.state_repository import IStateRepository
 from src.infrastructure.database.mapper.state_mapper import StateMapper
 from src.infrastructure.database.mapper.state_summary_mapper import StateSummaryMapper
+
+from .cursor import iter_documents
 
 
 class MongoStateRepository(IStateRepository):
@@ -18,9 +21,8 @@ class MongoStateRepository(IStateRepository):
         projection = {"_id": 0, "educacao": 1, "socioeconomico": 1}
 
         cursor = self.municipio_collection.find(query, projection)
-        raw_documents = await cursor.to_list(length=None)
-
-        return [StateSummaryMapper.to_entity(doc) for doc in raw_documents]
+        async with aclosing(iter_documents(cursor)) as documents:
+            return [StateSummaryMapper.to_entity(doc) async for doc in documents]
 
     def _remove_accents(self, text: str) -> str:
         """Helper privado para ajudar no Fuzzy Search."""

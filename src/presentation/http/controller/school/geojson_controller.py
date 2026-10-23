@@ -3,9 +3,12 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from src.application.school.geojson.get_bairro_by_school_id import GetBairroBySchoolId
 from src.application.school.geojson.get_bairros_geojson import GetBairrosGeoJson
 from src.application.school.geojson.get_paraiba_geojson import GetParaibaGeoJson
+from src.presentation.http.large_json import iter_use_case, large_json, response_key
 from src.presentation.http.schemas.geojson_schema import (
     BairroBySchoolResponse,
+    BairroGeoJsonFeature,
     BairroGeoJsonFeatureCollection,
+    ParaibaSchoolFeature,
     ParaibaSchoolFeatureCollection,
 )
 
@@ -29,7 +32,12 @@ async def get_paraiba_geojson_endpoint(
     ),
     use_case: GetParaibaGeoJson = Depends(get_paraiba_geojson_use_case),
 ):
-    return await use_case.execute(municipio_id=municipio_id)
+    return await large_json.response(
+        response_key("schools", municipio_id=municipio_id),
+        lambda: iter_use_case(use_case, municipio_id=municipio_id),
+        ParaibaSchoolFeature,
+        ttl=60,
+    )
 
 
 @router.get(
@@ -39,7 +47,12 @@ async def get_bairros_geojson_endpoint(
     municipio: str = Path(..., min_length=1, description="Nome do municipio"),
     use_case: GetBairrosGeoJson = Depends(get_bairros_geojson_use_case),
 ):
-    return await use_case.execute(municipio=municipio)
+    return await large_json.response(
+        response_key("school_bairros", municipio=municipio),
+        lambda: iter_use_case(use_case, municipio=municipio),
+        BairroGeoJsonFeature,
+        ttl=60,
+    )
 
 
 @router.get("/bairro/{school_id}", response_model=BairroBySchoolResponse)

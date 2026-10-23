@@ -23,3 +23,12 @@ class ITerritorialAggregationRepository(ABC):
     ) -> list[dict[str, Any]]:
         """Returns neighborhood documents for a municipality using bairro_indicadores as primary source, including cd_municipio-compatible documents."""
         ...
+
+    async def iter_cities(self, **kwargs):
+        result = await self.get_cities(**kwargs)
+        for feature in result["features"]:
+            yield feature
+
+    async def iter_neighborhoods(self, **kwargs):
+        for item in await self.get_by_municipio(**kwargs):
+            yield item

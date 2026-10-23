@@ -308,17 +308,18 @@ async def test_get_geojson_accepts_legacy_municipio_field_resolution():
 
 
 @pytest.mark.asyncio
-async def test_get_geojson_uses_separate_cache_entries_for_each_uf_filter():
+async def test_get_geojson_keeps_uf_filters_independent_without_object_cache():
     repository = MongoSchoolRepository(collection=FakeCollection([]))
 
     await repository.get_geojson(sg_uf=["PB"])
+    assert repository.collection.find_args[0]["estadoSigla"] == {"$in": ["PB"]}
     await repository.get_geojson(sg_uf=["PE"])
-
-    assert set(repository._geojson_cache) == {"PB:__all__", "PE:__all__"}
+    assert repository.collection.find_args[0]["estadoSigla"] == {"$in": ["PE"]}
+    assert not hasattr(repository, "_geojson_cache")
 
 
 @pytest.mark.asyncio
-async def test_geojson_indexes_use_generic_names():
+async def test_geojson_requests_do_not_create_indexes():
     class IndexCollection(FakeCollection):
         def __init__(self):
             super().__init__([])
@@ -330,9 +331,6 @@ async def test_geojson_indexes_use_generic_names():
     collection = IndexCollection()
     repository = MongoSchoolRepository(collection=collection)
 
-    await repository._ensure_geojson_indexes()
+    await repository.get_geojson()
 
-    assert collection.index_names == [
-        "idx_geojson_municipio",
-        "idx_geojson_municipio_legacy",
-    ]
+    assert collection.index_names == []

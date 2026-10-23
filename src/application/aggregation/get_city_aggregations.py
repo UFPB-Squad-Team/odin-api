@@ -1,3 +1,4 @@
+from contextlib import aclosing
 from typing import Any
 
 from src.domain.repository.territorial_aggregation_repository import (
@@ -61,3 +62,14 @@ class GetCityAggregations:
             f"city:{co_municipio or '__all__'}:{uf_part}:"
             f"geom={1 if include_geometria else 0}"
         )
+
+    async def iter_items(self, co_municipio=None, sg_uf=None, include_geometria=False):
+        async with aclosing(
+            self.repository.iter_cities(
+                co_municipio=co_municipio,
+                sg_uf=sg_uf,
+                include_geometria=include_geometria,
+            )
+        ) as items:
+            async for item in items:
+                yield item

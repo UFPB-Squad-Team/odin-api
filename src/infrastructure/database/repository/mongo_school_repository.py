@@ -1,7 +1,7 @@
-import asyncio
 import re
-import time
 import unicodedata
+from collections.abc import AsyncGenerator
+from contextlib import aclosing
 from typing import Any
 
 from bson import ObjectId
@@ -16,6 +16,7 @@ from src.infrastructure.database.config.app_config import config
 
 from ..mapper.school_mapper import MongoSchoolMapper
 from .base_mongo_repository import BaseMongoRepository
+from .cursor import iter_documents
 
 SCHOOL_FIELD_MAP = {
     "id": "_id",
@@ -57,12 +58,6 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             default_sort_field="escolaIdInep",
             use_estimated_total_for_unfiltered=config.use_estimated_total_for_unfiltered_lists,
         )
-        self._geojson_cache: dict[str, tuple[float, dict]] = {}
-        self._geojson_ttl_seconds = 60.0
-        self._geojson_cache_lock = asyncio.Lock()
-        self._geojson_cache_max_keys = 512
-        self._geojson_indexes_ready = False
-        self._geojson_index_lock = asyncio.Lock()
 
     @staticmethod
     def _normalize_municipio_input(value: str) -> str:
@@ -101,58 +96,6 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             if value is not None:
                 return str(value)
         return None
-
-    async def _ensure_geojson_indexes(self) -> None:
-        if self._geojson_indexes_ready or not hasattr(self.collection, "create_index"):
-            return
-
-        async with self._geojson_index_lock:
-            if self._geojson_indexes_ready:
-                return
-
-            try:
-                await self.collection.create_index(
-                    [
-                        ("estadoSigla", 1),
-                        ("municipioIdIbge", 1),
-                        ("escolaIdInep", 1),
-                    ],
-                    background=True,
-                    name="idx_geojson_municipio",
-                )
-                await self.collection.create_index(
-                    [
-                        ("estadoSigla", 1),
-                        ("municipio_id_ibge", 1),
-                        ("escolaIdInep", 1),
-                    ],
-                    background=True,
-                    name="idx_geojson_municipio_legacy",
-                )
-            except Exception:
-                pass
-
-            self._geojson_indexes_ready = True
-
-    def _cleanup_geojson_cache(self, now: float) -> None:
-        expired_keys = [
-            key
-            for key, (cached_at, _) in self._geojson_cache.items()
-            if (now - cached_at) >= self._geojson_ttl_seconds
-        ]
-        for key in expired_keys:
-            self._geojson_cache.pop(key, None)
-
-        if len(self._geojson_cache) <= self._geojson_cache_max_keys:
-            return
-
-        oldest_keys = sorted(
-            self._geojson_cache.items(),
-            key=lambda item: item[1][0],
-        )
-        to_remove = len(self._geojson_cache) - self._geojson_cache_max_keys
-        for key, _ in oldest_keys[:to_remove]:
-            self._geojson_cache.pop(key, None)
 
     async def list_all(
         self,
@@ -231,24 +174,21 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             return clauses[0]
         return {"$and": clauses}
 
-    async def get_geojson(
-        self,
-        sg_uf: list[str] | None = None,
-        municipio_id: str | None = None,
-    ) -> dict:
-        await self._ensure_geojson_indexes()
+    async def get_geojson(self, sg_uf=None, municipio_id=None) -> dict:
+        return {
+            "type": "FeatureCollection",
+            "features": [
+                feature
+                async for feature in self.iter_geojson_features(sg_uf, municipio_id)
+            ],
+        }
 
+    async def iter_geojson_features(
+        self, sg_uf: list[str] | None = None, municipio_id: str | None = None
+    ) -> AsyncGenerator[dict[str, Any], None]:
         normalized_ufs = sorted(
             {uf.strip().upper() for uf in sg_uf or [] if uf.strip()}
         )
-        cache_scope = ",".join(normalized_ufs) or "__all_ufs__"
-        cache_key = f"{cache_scope}:{municipio_id or '__all__'}"
-        now = time.monotonic()
-        self._cleanup_geojson_cache(now)
-        cached = self._geojson_cache.get(cache_key)
-        if cached and (now - cached[0]) < self._geojson_ttl_seconds:
-            return cached[1]
-
         match_query: dict[str, Any] = {
             "localizacao.type": "Point",
             "localizacao.coordinates.0": {"$type": "number"},
@@ -286,29 +226,28 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             "localizacao": 1,
         }
 
-        docs = await self.collection.find(match_query, projection).to_list(length=None)
+        async with aclosing(
+            iter_documents(self.collection.find(match_query, projection))
+        ) as documents:
+            async for doc in documents:
+                escola_id_inep = doc.get("escolaIdInep")
+                if escola_id_inep is None:
+                    continue
 
-        features = []
-        for doc in docs:
-            escola_id_inep = doc.get("escolaIdInep")
-            if escola_id_inep is None:
-                continue
+                feature_id = str(escola_id_inep)
+                municipio_id_ibge = self._resolve_municipio_id_ibge(doc)
+                indicadores = dict(doc.get("indicadores") or {})
+                ano_referencia = indicadores.get("anoReferencia", 2025)
+                total_alunos = indicadores.get("totalAlunos", 0)
+                inse = indicadores.get("inse", doc.get("inse"))
+                indicadores["anoReferencia"] = ano_referencia
+                indicadores["totalAlunos"] = total_alunos
+                if inse is not None:
+                    indicadores["inse"] = inse
 
-            feature_id = str(escola_id_inep)
-            municipio_id_ibge = self._resolve_municipio_id_ibge(doc)
-            indicadores = dict(doc.get("indicadores") or {})
-            ano_referencia = indicadores.get("anoReferencia", 2025)
-            total_alunos = indicadores.get("totalAlunos", 0)
-            inse = indicadores.get("inse", doc.get("inse"))
-            indicadores["anoReferencia"] = ano_referencia
-            indicadores["totalAlunos"] = total_alunos
-            if inse is not None:
-                indicadores["inse"] = inse
+                matriculas = doc.get("matriculas") or {}
 
-            matriculas = doc.get("matriculas") or {}
-
-            features.append(
-                {
+                yield {
                     "type": "Feature",
                     "id": feature_id,
                     "geometry": doc.get("localizacao"),
@@ -335,19 +274,19 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
                         "ideb": (doc.get("indicadores") or {}).get("ideb"),
                     },
                 }
-            )
-
-        result = {"type": "FeatureCollection", "features": features}
-        async with self._geojson_cache_lock:
-            write_now = time.monotonic()
-            self._cleanup_geojson_cache(write_now)
-            self._geojson_cache[cache_key] = (write_now, result)
-        return result
 
     async def get_paraiba_geojson(self, municipio_id: str | None = None) -> dict:
         return await self.get_geojson(municipio_id=municipio_id)
 
     async def get_bairros_geojson(self, municipio: str) -> dict:
+        return {
+            "type": "FeatureCollection",
+            "features": [
+                feature async for feature in self.iter_bairros_features(municipio)
+            ],
+        }
+
+    async def iter_bairros_features(self, municipio: str):
         municipio_candidates = self._build_municipio_candidates(municipio)
         pipeline = [
             {
@@ -376,15 +315,14 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
             {"$sort": {"qtd_escolas": -1, "_id": 1}},
         ]
 
-        docs = await self.collection.aggregate(pipeline).to_list(length=None)
+        async with aclosing(
+            iter_documents(self.collection.aggregate(pipeline))
+        ) as documents:
+            async for doc in documents:
+                if doc.get("avg_lon") is None or doc.get("avg_lat") is None:
+                    continue
 
-        features = []
-        for doc in docs:
-            if doc.get("avg_lon") is None or doc.get("avg_lat") is None:
-                continue
-
-            features.append(
-                {
+                yield {
                     "type": "Feature",
                     "id": doc.get("_id"),
                     "geometry": {
@@ -399,9 +337,6 @@ class MongoSchoolRepository(BaseMongoRepository[School], ISchoolRepository):
                         "avg_ideb": doc.get("avg_ideb"),
                     },
                 }
-            )
-
-        return {"type": "FeatureCollection", "features": features}
 
     async def get_by_inep_id(self, inep_id: str | int) -> School | None:
         """

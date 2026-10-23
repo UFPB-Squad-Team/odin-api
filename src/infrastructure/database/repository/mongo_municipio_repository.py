@@ -3,7 +3,6 @@ from typing import Any
 
 from src.domain.entities.municipio import (
     EducacaoStats,
-    MunicipioCatalogItem,
     MunicipioResumo,
     SocioeconomicoStats,
 )
@@ -26,50 +25,6 @@ class MongoMunicipioRepository(
         setor_collection: Any,
     ):
         super().__init__(municipio_collection, bairro_collection, setor_collection)
-
-    async def list_municipios(
-        self,
-        sg_uf: str | None = None,
-    ) -> list[MunicipioCatalogItem]:
-        normalized_uf = sg_uf.upper() if sg_uf else None
-
-        query: dict[str, Any] = {}
-        if normalized_uf:
-            query = {
-                "$or": [
-                    {"sg_uf": normalized_uf},
-                    {"uf": normalized_uf},
-                    {"estado_sigla": normalized_uf},
-                    {"estadoSigla": normalized_uf},
-                ]
-            }
-
-        projection = {
-            "co_municipio": 1,
-            "municipioIdIbge": 1,
-            "municipio_id_ibge": 1,
-            "idIbge": 1,
-            "municipio": 1,
-            "nm_municipio": 1,
-            "municipio_nome": 1,
-            "municipioNome": 1,
-            "sg_uf": 1,
-            "uf": 1,
-            "estado_sigla": 1,
-            "estadoSigla": 1,
-        }
-
-        docs = await self.municipio_collection.find(query, projection).to_list(
-            length=None
-        )
-        items = [
-            item
-            for item in (self._map_municipio_catalog_item(doc) for doc in docs)
-            if item is not None
-        ]
-
-        items.sort(key=lambda item: self._sort_key(item.nome))
-        return items
 
     async def get_resumo(
         self,

@@ -152,3 +152,13 @@ class ISchoolRepository(IBaseReadRepository[School], ABC):
     async def get_bairro_by_school_id(self, school_id: str) -> Dict[str, Any] | None:
         """Returns bairro information for a school id."""
         ...
+
+    async def iter_geojson_features(self, sg_uf=None, municipio_id=None):
+        result = await self.get_paraiba_geojson(municipio_id=municipio_id)
+        for feature in result["features"]:
+            yield feature
+
+    async def iter_bairros_features(self, municipio):
+        result = await self.get_bairros_geojson(municipio)
+        for feature in result["features"]:
+            yield feature
