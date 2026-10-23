@@ -27,14 +27,19 @@ class MongoDB:
                 logger.error("Mongo URI is not configured")
                 return False
 
-            client: AsyncIOMotorClient = AsyncIOMotorClient(mongo_uri)
+            client: AsyncIOMotorClient = AsyncIOMotorClient(
+                mongo_uri,
+                minPoolSize=0,
+                maxPoolSize=config.mongo_max_pool_size,
+                serverSelectionTimeoutMS=10000,
+                waitQueueTimeoutMS=10000,
+            )
             database = client.get_database(config.database_name)
 
             self.client = client
             self.database = database
 
             await client.admin.command("ping")
-            await self._ensure_indexes()
 
             self._is_connected = True
             logger.info(" MongoDB connected successfully")
@@ -42,6 +47,10 @@ class MongoDB:
 
         except Exception as e:
             logger.error(f" Failed to connect to MongoDB: {e}")
+            if self.client is not None:
+                self.client.close()
+            self.client = None
+            self.database = None
             self._is_connected = False
             return False
 
@@ -231,7 +240,7 @@ class MongoDB:
         index_name: str,
         **kwargs: Any,
     ) -> None:
-        """Create or replace index, handling conflicts gracefully."""
+        """Create missing indexes, reusing equivalent ones without dropping data."""
         try:
             await collection.create_index(
                 index_spec,
@@ -246,34 +255,27 @@ class MongoDB:
                 "IndexOptionsConflict" in error_msg
                 or "already exists with a different name" in error_msg
             ):
-                logger.warning(
-                    f"Index with similar key exists; dropping old index and recreating: {index_name}"
-                )
-                try:
-                    desired_key_pairs = list(index_spec)
-                    # Drop indexes with the same key pattern except the one we want to create.
-                    indexes = await collection.list_indexes().to_list(length=None)
-                    for idx_info in indexes:
-                        idx_key = idx_info.get("key")
-                        existing_key_pairs = list(idx_key.items()) if idx_key else []
-                        if existing_key_pairs == desired_key_pairs:
-                            if idx_info.get("name") != index_name:
-                                await collection.drop_index(idx_info.get("name"))
-                                logger.info(
-                                    f"Dropped old index: {idx_info.get('name')}"
-                                )
-                    # Now create the new index
-                    await collection.create_index(
-                        index_spec,
-                        name=index_name,
-                        background=True,
-                        **kwargs,
-                    )
-                    logger.info(f"Created index: {index_name}")
-                except Exception as inner_exc:
-                    logger.error(
-                        f"Failed to handle index conflict for {index_name}: {inner_exc}"
-                    )
+                indexes = await collection.list_indexes().to_list(length=None)
+                for existing in indexes:
+                    if list(existing.get("key", {}).items()) != index_spec:
+                        continue
+                    matches = True
+                    for option, expected in kwargs.items():
+                        actual = existing.get(option)
+                        if isinstance(expected, dict) and isinstance(actual, dict):
+                            matches = matches and all(
+                                actual.get(k) == v for k, v in expected.items()
+                            )
+                        else:
+                            matches = matches and actual == expected
+                    if matches:
+                        logger.info(
+                            "Reusing index %s for %s", existing.get("name"), index_name
+                        )
+                        return
+                raise RuntimeError(
+                    f"Conflicting index options for {index_name}; manual review required"
+                ) from exc
             else:
                 logger.error(f"Failed to create index {index_name}: {exc}")
                 raise

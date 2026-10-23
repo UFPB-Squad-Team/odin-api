@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from dotenv import load_dotenv
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 # Load .env file explicitly from API root directory
@@ -36,6 +36,14 @@ class AppConfig(BaseSettings):
     # Aggregation cache (in-memory, TTL-based)
     aggregation_cache_ttl_seconds: int = 300
     aggregation_cache_max_keys: int = 512
+
+    # Resource budgets for the 512 MB service
+    mongo_max_pool_size: int = Field(default=10, ge=1)
+    response_cache_max_bytes: int = Field(default=16 * 1024 * 1024, ge=0)
+    response_cache_max_entry_bytes: int = Field(default=1024 * 1024, ge=0)
+    response_max_flights: int = Field(default=32, ge=1)
+    geo_concurrency: int = Field(default=2, ge=1)
+    gzip_enabled: bool = False
 
     # CORS
     cors_allowed_origins: str = "http://localhost:3000"

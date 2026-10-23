@@ -1,3 +1,4 @@
+from contextlib import aclosing
 from typing import Any
 
 from src.domain.repository.territorial_aggregation_repository import (
@@ -68,3 +69,18 @@ class GetNeighborhoodAggregations:
             f"neighborhood:{municipio_id_ibge}:{bairro or '__all__'}:{uf_part}:"
             f"geom={1 if include_geometria else 0}"
         )
+
+    async def iter_items(
+        self, municipio_id_ibge, bairro=None, include_geometria=False, sg_uf=None
+    ):
+        NeighborhoodValidator(municipio_id_ibge)
+        async with aclosing(
+            self.repository.iter_neighborhoods(
+                municipio_id_ibge=municipio_id_ibge,
+                bairro=bairro,
+                include_geometria=include_geometria,
+                sg_uf=sg_uf,
+            )
+        ) as items:
+            async for item in items:
+                yield item

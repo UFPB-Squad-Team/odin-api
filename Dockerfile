@@ -55,7 +55,7 @@ EXPOSE ${PORT}
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/health')" || exit 1
+    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://localhost:' + os.environ.get('PORT', '8000') + '/health')" || exit 1
 
 # Production entrypoint with Gunicorn + Uvicorn workers
 CMD ["gunicorn", "src.main:app", "-c", "gunicorn.conf.py"]

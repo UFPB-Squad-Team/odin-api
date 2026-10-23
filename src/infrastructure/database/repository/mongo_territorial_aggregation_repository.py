@@ -1,5 +1,7 @@
 import re
 import unicodedata
+from collections.abc import AsyncGenerator
+from contextlib import aclosing
 from typing import Any
 
 from src.domain.entities.municipio import MunicipioCatalogItem, MunicipioResumo
@@ -13,6 +15,8 @@ from src.infrastructure.database.mapper.mongo_neighborhood_mapper import (
 from src.infrastructure.database.mapper.territorial_aggregation_mapper import (
     TerritorialAggregationMapper,
 )
+
+from .cursor import iter_documents
 
 
 class MongoTerritorialAggregationRepository(
@@ -57,124 +61,139 @@ class MongoTerritorialAggregationRepository(
             ]
         }
 
-    async def get_cities(
-        self,
-        co_municipio: str | None = None,
-        sg_uf: str | list[str] | None = None,
-        include_geometria: bool = False,
-    ) -> dict[str, Any]:
-        normalized_uf = self._normalize_uf_filter(sg_uf)
-
-        if co_municipio:
-            query: dict[str, Any] = {
-                "$or": [
-                    {"co_municipio": co_municipio},
-                    {"municipioIdIbge": co_municipio},
-                    {"municipio_id_ibge": co_municipio},
-                    {"idIbge": co_municipio},
-                ]
-            }
-            if normalized_uf:
-                query = {
-                    "$and": [
-                        query,
-                        self._uf_clause(normalized_uf),
-                    ]
-                }
-
-            primary_doc = await self.municipio_collection.find_one(query)
-
-            if primary_doc:
-                city = TerritorialAggregationMapper.city_from_doc(
-                    primary_doc,
-                    source="municipio_indicadores",
-                    include_geometria=include_geometria,
-                )
-                return {
-                    "type": "FeatureCollection",
-                    "features": [TerritorialAggregationMapper.city_to_feature(city)],
-                }
-
-            fallback_docs = await self._aggregate_city_from_setor(
-                co_municipio=co_municipio,
-                sg_uf=normalized_uf,
-            )
-            cities = [
-                TerritorialAggregationMapper.city_from_doc(
-                    doc,
-                    source="setor_indicadores",
-                    include_geometria=include_geometria,
-                )
-                for doc in fallback_docs
-            ]
-
-            return {
-                "type": "FeatureCollection",
-                "features": [
-                    TerritorialAggregationMapper.city_to_feature(city)
-                    for city in cities
-                ],
-            }
-
-        list_query: dict[str, Any] = {}
-        if normalized_uf:
-            list_query = self._uf_clause(normalized_uf)
-
-        docs = await self.municipio_collection.find(list_query).to_list(length=None)
-        cities = [
-            TerritorialAggregationMapper.city_from_doc(
-                doc,
-                source="municipio_indicadores",
-                include_geometria=include_geometria,
-            )
-            for doc in docs
-        ]
-
+    async def get_cities(self, co_municipio=None, sg_uf=None, include_geometria=False):
         return {
             "type": "FeatureCollection",
             "features": [
-                TerritorialAggregationMapper.city_to_feature(city) for city in cities
+                feature
+                async for feature in self.iter_cities(
+                    co_municipio, sg_uf, include_geometria
+                )
             ],
         }
 
-    async def get_by_municipio(
-        self,
-        municipio_id_ibge: str,
-        bairro: str | None = None,
-        include_geometria: bool = False,
-        sg_uf: str | list[str] | None = None,
-    ) -> list[dict[str, Any]]:
+    async def iter_cities(self, co_municipio=None, sg_uf=None, include_geometria=False):
         normalized_uf = self._normalize_uf_filter(sg_uf)
-        primary_docs = await self._find_neighborhood_docs(
-            municipio_id_ibge=municipio_id_ibge,
-            bairro=bairro,
-            sg_uf=normalized_uf,
-        )
-
-        if primary_docs:
-            primary_docs = await self._enrich_primary_neighborhood_docs(primary_docs)
-            return [
-                MongoNeighborhoodMapper.from_doc(
+        if co_municipio:
+            query = {
+                "$or": [
+                    {field: co_municipio}
+                    for field in (
+                        "co_municipio",
+                        "municipioIdIbge",
+                        "municipio_id_ibge",
+                        "idIbge",
+                    )
+                ]
+            }
+            if normalized_uf:
+                query = {"$and": [query, self._uf_clause(normalized_uf)]}
+            doc = await self.municipio_collection.find_one(
+                query, self._city_projection(include_geometria)
+            )
+            if doc:
+                city = TerritorialAggregationMapper.city_from_doc(
                     doc,
+                    source="municipio_indicadores",
+                    include_geometria=include_geometria,
+                )
+                yield TerritorialAggregationMapper.city_to_feature(city)
+                return
+            docs = await self._aggregate_city_from_setor(
+                co_municipio=co_municipio, sg_uf=normalized_uf
+            )
+            for doc in docs:
+                city = TerritorialAggregationMapper.city_from_doc(
+                    doc, source="setor_indicadores", include_geometria=include_geometria
+                )
+                yield TerritorialAggregationMapper.city_to_feature(city)
+            return
+        query = self._uf_clause(normalized_uf) if normalized_uf else {}
+        async with aclosing(
+            iter_documents(
+                self.municipio_collection.find(
+                    query, self._city_projection(include_geometria)
+                )
+            )
+        ) as documents:
+            async for doc in documents:
+                city = TerritorialAggregationMapper.city_from_doc(
+                    doc,
+                    source="municipio_indicadores",
+                    include_geometria=include_geometria,
+                )
+                yield TerritorialAggregationMapper.city_to_feature(city)
+
+    @staticmethod
+    def _city_projection(include_geometria: bool = False) -> dict[str, Any]:
+        # Geometry may be required by the legacy coordinate fallback. Select
+        # every consumed alias, but never fetch unrelated census payloads.
+        fields = (
+            "_id co_municipio municipioIdIbge municipio_id_ibge idIbge nm_municipio municipio "
+            "municipio_nome municipioNome sg_uf estado_sigla estadoSigla uf "
+            "total_escolas qtd_escolas escolas total_alunos total_matriculas qtd_alunos alunos "
+            "avg_ideb ideb_medio ideb pct_com_biblioteca pct_com_internet pct_com_internet_alunos "
+            "pct_com_lab_informatica pct_com_lab_ciencias pct_sem_acessibilidade "
+            "socioeconomico educacao centroide centroid geometry localizacao geometria "
+            "longitude lon avg_lon latitude lat avg_lat"
+        )
+        projection: dict[str, Any] = dict.fromkeys(fields.split(), 1)
+        if not include_geometria:
+            has_centroid = {
+                "$ne": [
+                    {"$ifNull": ["$centroide", {"$ifNull": ["$centroid", None]}]},
+                    None,
+                ]
+            }
+            for field in ("geometry", "geometria", "localizacao"):
+                projection[field] = {"$cond": [has_centroid, "$$REMOVE", "$" + field]}
+        return projection
+
+    async def get_by_municipio(
+        self, municipio_id_ibge, bairro=None, include_geometria=False, sg_uf=None
+    ):
+        return [
+            item
+            async for item in self.iter_neighborhoods(
+                municipio_id_ibge, bairro, include_geometria, sg_uf
+            )
+        ]
+
+    async def iter_neighborhoods(
+        self, municipio_id_ibge, bairro=None, include_geometria=False, sg_uf=None
+    ):
+        normalized_uf = self._normalize_uf_filter(sg_uf)
+        found = False
+        async with aclosing(
+            self._iter_neighborhood_docs(
+                municipio_id_ibge=municipio_id_ibge,
+                bairro=bairro,
+                sg_uf=normalized_uf,
+                include_geometria=include_geometria,
+            )
+        ) as items:
+            async for doc in items:
+                found = True
+                enriched = await self._enrich_primary_neighborhood_docs([doc])
+                yield MongoNeighborhoodMapper.from_doc(
+                    enriched[0],
                     source="bairros_indicadores",
                     include_geometria=include_geometria,
                 )
-                for doc in primary_docs
-            ]
-
-        fallback_docs = await self._aggregate_neighborhoods_from_setor(
-            co_municipio=municipio_id_ibge,
-            bairro=bairro,
-            sg_uf=normalized_uf,
-        )
-        return [
-            MongoNeighborhoodMapper.from_doc(
-                doc,
-                source="setor_indicadores",
+        if found:
+            return
+        async with aclosing(
+            self._iter_neighborhoods_from_setor(
+                co_municipio=municipio_id_ibge,
+                bairro=bairro,
+                sg_uf=normalized_uf,
                 include_geometria=include_geometria,
             )
-            for doc in fallback_docs
-        ]
+        ) as items:
+            async for doc in items:
+                yield MongoNeighborhoodMapper.from_doc(
+                    doc, source="setor_indicadores", include_geometria=include_geometria
+                )
 
     async def list_municipios(
         self,
@@ -208,14 +227,14 @@ class MongoTerritorialAggregationRepository(
             "estadoSigla": 1,
         }
 
-        docs = await self.municipio_collection.find(query, projection).to_list(
-            length=None
-        )
-        items = [
-            item
-            for item in (self._map_municipio_catalog_item(doc) for doc in docs)
-            if item is not None
-        ]
+        items = []
+        async with aclosing(
+            iter_documents(self.municipio_collection.find(query, projection))
+        ) as documents:
+            async for doc in documents:
+                item = self._map_municipio_catalog_item(doc)
+                if item is not None:
+                    items.append(item)
 
         items.sort(key=lambda item: self._sort_key(item.nome))
         return items
@@ -546,13 +565,14 @@ class MongoTerritorialAggregationRepository(
 
         return "Bairro sem nome"
 
-    async def _find_neighborhood_docs(
+    async def _iter_neighborhood_docs(
         self,
         *,
         municipio_id_ibge: str,
         bairro: str | None = None,
         sg_uf: str | list[str] | None = None,
-    ) -> list[dict[str, Any]]:
+        include_geometria: bool = False,
+    ) -> AsyncGenerator[dict[str, Any], None]:
         query: dict[str, Any] = {
             "$and": [
                 {
@@ -584,7 +604,7 @@ class MongoTerritorialAggregationRepository(
                 ]
             }
 
-        projection = {
+        projection: dict[str, Any] = {
             "_id": 1,
             "municipio": 1,
             "nm_municipio": 1,
@@ -626,7 +646,46 @@ class MongoTerritorialAggregationRepository(
             "educacao": 1,
         }
 
-        return await self.bairro_collection.find(query, projection).to_list(length=None)
+        if not include_geometria:
+            # The name resolver only needs geometry if the first populated name
+            # alias is absent, invalid or blank. Match its precedence exactly.
+            resolved_name = {
+                "$ifNull": [
+                    "$bairro",
+                    {
+                        "$ifNull": [
+                            "$nm_bairro",
+                            {"$ifNull": ["$nome_area", "$situacao"]},
+                        ]
+                    },
+                ]
+            }
+            known_name = {
+                "$let": {
+                    "vars": {"name": resolved_name},
+                    "in": {
+                        "$cond": [
+                            {"$eq": [{"$type": "$$name"}, "string"]},
+                            {"$ne": [{"$trim": {"input": "$$name"}}, ""]},
+                            False,
+                        ]
+                    },
+                }
+            }
+            for field in (
+                "geometria",
+                "geometry",
+                "centroide",
+                "centroid",
+                "localizacao",
+            ):
+                projection[field] = {"$cond": [known_name, "$$REMOVE", "$" + field]}
+
+        async with aclosing(
+            iter_documents(self.bairro_collection.find(query, projection))
+        ) as documents:
+            async for doc in documents:
+                yield doc
 
     async def _aggregate_city_from_setor(
         self,
@@ -645,7 +704,7 @@ class MongoTerritorialAggregationRepository(
         if sg_uf:
             match_conditions.append(self._uf_clause(sg_uf))
 
-        pipeline = [
+        pipeline: list[dict[str, Any]] = [
             {"$match": {"$and": match_conditions}},
             {
                 "$project": {
@@ -771,13 +830,14 @@ class MongoTerritorialAggregationRepository(
 
         return await self.setor_collection.aggregate(pipeline).to_list(length=None)
 
-    async def _aggregate_neighborhoods_from_setor(
+    async def _iter_neighborhoods_from_setor(
         self,
         *,
         co_municipio: str,
         bairro: str | None,
         sg_uf: str | list[str] | None = None,
-    ) -> list[dict[str, Any]]:
+        include_geometria: bool = False,
+    ) -> AsyncGenerator[dict[str, Any], None]:
         municipio_match_values: list[Any] = [co_municipio]
         if co_municipio.isdigit():
             municipio_match_values.append(int(co_municipio))
@@ -795,7 +855,7 @@ class MongoTerritorialAggregationRepository(
         if sg_uf:
             match_conditions.append(self._uf_clause(sg_uf))
 
-        pipeline = [
+        pipeline: list[dict[str, Any]] = [
             {
                 "$match": (
                     match_conditions[0]
@@ -1119,4 +1179,13 @@ class MongoTerritorialAggregationRepository(
             },
         )
 
-        return await self.setor_collection.aggregate(pipeline).to_list(length=None)
+        if not include_geometria:
+            # Keep the has_geometria ordering key, then shed polygons before the
+            # sort and transfer. Numeric coordinate fallbacks were already read.
+            pipeline.insert(3, {"$unset": "geometria"})
+
+        async with aclosing(
+            iter_documents(self.setor_collection.aggregate(pipeline))
+        ) as documents:
+            async for doc in documents:
+                yield doc

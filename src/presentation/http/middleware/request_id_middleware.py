@@ -1,63 +1,71 @@
-"""
-Middleware that injects a unique request ID into each request's logging context.
-
-This enables log correlation across distributed traces and simplifies debugging
-by grouping all log entries generated during a single request under a common ID.
-
-Usage:
-    app.add_middleware(RequestIDMiddleware)
-
-The middleware adds the `request_id` to the request state, logs it on every
-request/response, and makes it available via `request.state.request_id`.
-"""
+"""ASGI request metrics measured through the final response body."""
 
 import logging
+import time
 import uuid
-from typing import Awaitable, Callable
-
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-class RequestIDMiddleware(BaseHTTPMiddleware):
-    """Middleware that assigns a unique request ID to every incoming request."""
+def container_memory_bytes():
+    # cgroup v2 / v1 account for master, worker and filesystem page cache.
+    for path in (
+        "/sys/fs/cgroup/memory.current",
+        "/sys/fs/cgroup/memory/memory.usage_in_bytes",
+    ):
+        try:
+            return int(Path(path).read_text().strip())
+        except (OSError, ValueError):
+            continue
+    return None
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
+
+class RequestIDMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
         request_id = str(uuid.uuid4())
-        request.state.request_id = request_id
+        scope.setdefault("state", {})["request_id"] = request_id
+        started = time.monotonic()
+        status = 500
+        size = 0
+        headers_at = None
 
-        logger.info(
-            "request_start | method=%s | path=%s | request_id=%s",
-            request.method,
-            request.url.path,
-            request_id,
-        )
+        async def measured_send(message):
+            nonlocal status, size, headers_at
+            if message["type"] == "http.response.start":
+                status = message["status"]
+                headers_at = time.monotonic()
+                message = {
+                    **message,
+                    "headers": [
+                        *message.get("headers", []),
+                        (b"x-request-id", request_id.encode("ascii")),
+                    ],
+                }
+            elif message["type"] == "http.response.body":
+                size += len(message.get("body", b""))
+            await send(message)
 
         try:
-            response = await call_next(request)
+            await self.app(scope, receive, measured_send)
         except Exception:
-            logger.exception(
-                "request_exception | method=%s | path=%s | request_id=%s",
-                request.method,
-                request.url.path,
+            logger.exception("request_exception request_id=%s", request_id)
+            raise
+        finally:
+            route = scope.get("route")
+            logger.info(
+                "request_end method=%s route=%s status=%s bytes=%s duration_ms=%.1f headers_ms=%s memory_bytes=%s request_id=%s",
+                scope["method"],
+                getattr(route, "path", scope["path"]),
+                status,
+                size,
+                (time.monotonic() - started) * 1000,
+                round((headers_at - started) * 1000, 1) if headers_at else None,
+                container_memory_bytes(),
                 request_id,
             )
-            raise
-
-        logger.info(
-            "request_end | method=%s | path=%s | status=%d | request_id=%s",
-            request.method,
-            request.url.path,
-            response.status_code,
-            request_id,
-        )
-
-        response.headers["X-Request-ID"] = request_id
-        return response

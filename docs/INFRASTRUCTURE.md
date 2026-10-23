@@ -1,3 +1,5 @@
+> Perfil atual para Render Free: consulte [operação e validação em 512 MB](RENDER-512MB.md). O padrão agora é um worker, sem preload, e provisionamento de índices fora do startup.
+
 # Guia de Infraestrutura — Odin API
 
 > Documento de referência para setup, deploy, operação e manutenção do backend Odin.
@@ -160,7 +162,7 @@ Todas as variáveis são carregadas via `pydantic-settings` com validação auto
 | `USE_ESTIMATED_TOTAL` | bool | `true` | Usar contagem estimada para listas sem filtro |
 | `AGGREGATION_CACHE_TTL_SECONDS` | int | `300` | TTL (segundos) do cache em memória de agregações |
 | `AGGREGATION_CACHE_MAX_KEYS` | int | `512` | Máximo de chaves no cache em memória de agregações |
-| `WEB_CONCURRENCY` | int | `4` | Número de workers Gunicorn |
+| `WEB_CONCURRENCY` | int | `1` | Número de workers Gunicorn |
 | `GUNICORN_TIMEOUT` | int | `120` | Timeout dos workers (segundos) |
 | `MAX_REQUESTS` | int | `1000` | Requests antes de reciclar worker |
 
@@ -443,7 +445,7 @@ Uvicorn sozinho é single-process. Em produção, precisamos:
 
 | Parâmetro | Valor | Explicação |
 |---|---|---|
-| `workers` | `min(2*CPU+1, WEB_CONCURRENCY)` | Workers por CPU, limitado pelo env var |
+| `workers` | `WEB_CONCURRENCY` (default: `1`) | Workers por CPU, limitado pelo env var |
 | `worker_class` | `uvicorn.workers.UvicornWorker` | Workers ASGI assíncronos |
 | `worker_tmp_dir` | `/dev/shm` | Heartbeat via shared memory (rápido em containers) |
 | `timeout` | `120s` | Tempo máximo para processar um request |
@@ -451,26 +453,14 @@ Uvicorn sozinho é single-process. Em produção, precisamos:
 | `keepalive` | `5s` | Keep-alive de conexões HTTP |
 | `max_requests` | `1000` | Recicla worker após N requests |
 | `max_requests_jitter` | `50` | Randomiza reciclagem (evita thundering herd) |
-| `preload_app` | `true` | Carrega app antes de fork (economiza memória via COW) |
+| `preload_app` | `false` | Inicializa o app e o cliente MongoDB dentro do worker |
 
 
 ### Tuning de Workers
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Regra geral para apps I/O bound (como esta API):           │
-│                                                             │
-│  workers = (2 × CPU cores) + 1                              │
-│                                                             │
-│  Exemplos:                                                  │
-│  - 1 vCPU  → 2-3 workers                                   │
-│  - 2 vCPU  → 4-5 workers                                   │
-│  - 4 vCPU  → 8-9 workers (cap em 8 para containers)        │
-│                                                             │
-│  ⚠ Cada worker consome ~80-120MB de RAM                     │
-│  ⚠ Em containers com limite de memória, reduza workers      │
-└─────────────────────────────────────────────────────────────┘
-```
+Em 512 MB, use `WEB_CONCURRENCY=1`. Cada processo adicional possui heap, pool
+MongoDB e cache independentes. Aumentar workers exige medir a memoria do container
+sob carga; a quantidade de CPUs, sozinha, nao define um valor seguro.
 
 ### Sinais do Gunicorn
 

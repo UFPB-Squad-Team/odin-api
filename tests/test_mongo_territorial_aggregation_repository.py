@@ -6,6 +6,17 @@ from src.infrastructure.database.repository.mongo_territorial_aggregation_reposi
 
 
 class FakeAggregateCursor:
+    def batch_size(self, size):
+        self.batch_size_value = size
+        return self
+
+    async def close(self):
+        self.closed = True
+
+    async def __aiter__(self):
+        for doc in self.docs:
+            yield doc
+
     def __init__(self, docs):
         self.docs = list(docs)
 
@@ -16,6 +27,17 @@ class FakeAggregateCursor:
 
 
 class FakeFindCursor:
+    def batch_size(self, size):
+        self.batch_size_value = size
+        return self
+
+    async def close(self):
+        self.closed = True
+
+    async def __aiter__(self):
+        for doc in self.docs:
+            yield doc
+
     def __init__(self, docs):
         self.docs = list(docs)
 

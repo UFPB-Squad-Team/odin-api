@@ -1,7 +1,6 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
-from fastapi.responses import StreamingResponse
 
 from src.infrastructure.report.dossier_builder import MunicipioDossierBuilder
 from src.infrastructure.report.report_data_service import ReportDataService
@@ -9,6 +8,7 @@ from src.presentation.http.controller.report.callable.report_callable import (
     get_municipio_dossier_builder,
     get_report_data_service,
 )
+from src.presentation.http.owned_stream import OwnedStreamResponse
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ async def generate_municipio_dossier(
 
     filename = f"dossie_municipio_{municipio_id}.pdf"
 
-    return StreamingResponse(
+    return OwnedStreamResponse(
         pdf_stream,
         media_type="application/pdf",
         headers={
@@ -101,109 +101,22 @@ async def generate_state_dossier(
     data_service: ReportDataService = Depends(get_report_data_service),
 ):
     """Generate a state dossier PDF and stream it to the client."""
-    from src.infrastructure.report.chart_generator import (
-        generate_bar_chart,
-        generate_horizontal_bar_chart,
-        generate_pie_chart,
-    )
-    from src.infrastructure.report.pdf_generator import DossierPDF
-
     uf = sg_uf.upper()
-    state_data = await data_service.get_state_dossier_data(uf)
+    from src.infrastructure.report.state_pdf import render_state_dossier
+    from src.infrastructure.resources import pdf_renderer
 
-    if state_data is None:
+    pdf_stream = await pdf_renderer.run(
+        render_state_dossier, prepare=lambda: data_service.get_state_dossier_data(uf)
+    )
+    if pdf_stream is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Estado {uf} não encontrado ou sem dados disponíveis.",
         )
 
-    # Build a municipio-like data structure for the PDF generator
-    # (reusing the same DossierPDF class with adapted data)
-    from src.domain.entities.report import MunicipioDossierData
-
-    adapted_data = MunicipioDossierData(
-        municipio_id=uf,
-        municipio_nome=state_data.estado_nome,
-        uf=state_data.uf,
-        total_escolas=state_data.total_escolas,
-        total_alunos=state_data.total_alunos,
-        total_bairros=state_data.total_municipios,
-        ideb_por_etapa=state_data.ideb_por_etapa,
-        aprovacao_por_etapa=state_data.aprovacao_por_etapa,
-        escolas_por_dependencia=state_data.escolas_por_dependencia,
-        escolas_por_zona=state_data.escolas_por_zona,
-        top_escolas=[
-            {
-                "nome": m["nome"],
-                "ideb": m["ideb"],
-                "dependencia": "",
-                "localizacao": "",
-            }
-            for m in state_data.top_municipios
-        ],
-    )
-
-    pdf = DossierPDF(adapted_data)
-
-    # Generate charts
-    infra_labels, infra_values = [], []
-    for label, val in [
-        ("Internet", state_data.pct_internet),
-        ("Biblioteca", state_data.pct_biblioteca),
-        ("Lab. Informática", state_data.pct_lab_informatica),
-        ("Acessibilidade", state_data.pct_acessibilidade),
-    ]:
-        if val is not None:
-            infra_labels.append(label)
-            infra_values.append(val)
-
-    if infra_labels:
-        chart = generate_bar_chart(
-            labels=infra_labels,
-            values=infra_values,
-            title="Infraestrutura Escolar",
-            ylabel="Percentual de Escolas (%)",
-        )
-        pdf.add_chart("infra_bars", chart)
-
-    if state_data.escolas_por_dependencia:
-        dep_labels = list(state_data.escolas_por_dependencia.keys())
-        dep_values = [float(v) for v in state_data.escolas_por_dependencia.values()]
-        chart = generate_pie_chart(
-            labels=dep_labels,
-            values=dep_values,
-            title="Dependência Administrativa",
-        )
-        pdf.add_chart("dependencia_pie", chart)
-
-    if state_data.escolas_por_zona:
-        zona_labels = list(state_data.escolas_por_zona.keys())
-        zona_values = [float(v) for v in state_data.escolas_por_zona.values()]
-        chart = generate_pie_chart(
-            labels=zona_labels,
-            values=zona_values,
-            title="Localização (Urbana/Rural)",
-        )
-        pdf.add_chart("zona_pie", chart)
-
-    if state_data.top_municipios:
-        city_names = [
-            m["nome"][:25] + ("..." if len(m["nome"]) > 25 else "")
-            for m in state_data.top_municipios
-        ]
-        city_idebs = [float(m["ideb"]) for m in state_data.top_municipios]
-        chart = generate_horizontal_bar_chart(
-            labels=city_names,
-            values=city_idebs,
-            title="Top Municípios — IDEB",
-            xlabel="IDEB",
-        )
-        pdf.add_chart("top_schools", chart)
-
-    pdf_stream = pdf.render()
     filename = f"dossie_estado_{uf}.pdf"
 
-    return StreamingResponse(
+    return OwnedStreamResponse(
         pdf_stream,
         media_type="application/pdf",
         headers={

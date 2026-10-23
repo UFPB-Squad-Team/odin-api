@@ -89,11 +89,14 @@ def _mpl_style():
 
 
 def _fig_to_bytes(fig) -> bytes:
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=140, bbox_inches="tight", facecolor="white")
-    buf.seek(0)
-    plt.close(fig)
-    return buf.read()
+    try:
+        with io.BytesIO() as buf:
+            fig.savefig(
+                buf, format="png", dpi=140, bbox_inches="tight", facecolor="white"
+            )
+            return buf.getvalue()
+    finally:
+        plt.close(fig)
 
 
 def _chart_image(chart_bytes: bytes, width_cm: float, height_cm: float) -> Image:
@@ -1078,31 +1081,37 @@ class DossierPDF:
     def render(self) -> io.BytesIO:
         self._generate_charts()
         buf = io.BytesIO()
-        doc = SimpleDocTemplate(
-            buf,
-            pagesize=A4,
-            leftMargin=MARGIN_LEFT,
-            rightMargin=MARGIN_RIGHT,
-            topMargin=MARGIN_TOP + 0.4 * cm,
-            bottomMargin=MARGIN_BOTTOM + 0.5 * cm,
-            title=f"Dossiê do Município — {self.data.municipio_nome}",
-            author="ODIN — LEMA/UFPB",
-            subject=f"Relatório de indicadores de {self.data.municipio_nome}/{self.data.uf}",
-        )
-        doc._title = self._title
+        try:
+            doc = SimpleDocTemplate(
+                buf,
+                pagesize=A4,
+                leftMargin=MARGIN_LEFT,
+                rightMargin=MARGIN_RIGHT,
+                topMargin=MARGIN_TOP + 0.4 * cm,
+                bottomMargin=MARGIN_BOTTOM + 0.5 * cm,
+                title=f"Dossiê do Município — {self.data.municipio_nome}",
+                author="ODIN — LEMA/UFPB",
+                subject=f"Relatório de indicadores de {self.data.municipio_nome}/{self.data.uf}",
+            )
+            doc._title = self._title
 
-        self._build_cover()
-        self._build_summary()
-        self._build_educational()
-        self._build_infrastructure()
-        self._build_distribution()
-        self._build_top_schools()
-        self._build_socioeconomic()
-        self._build_footer()
+            self._build_cover()
+            self._build_summary()
+            self._build_educational()
+            self._build_infrastructure()
+            self._build_distribution()
+            self._build_top_schools()
+            self._build_socioeconomic()
+            self._build_footer()
 
-        doc.build(self._story, onFirstPage=_header_footer, onLaterPages=_header_footer)
-        buf.seek(0)
-        return buf
+            doc.build(
+                self._story, onFirstPage=_header_footer, onLaterPages=_header_footer
+            )
+            buf.seek(0)
+            return buf
+        except BaseException:
+            buf.close()
+            raise
 
     def _build_cover(self) -> None:
         s = self.styles
@@ -1836,82 +1845,93 @@ class StateDossierPDF:
 
     def render(self) -> io.BytesIO:
         buf = io.BytesIO()
-        doc = SimpleDocTemplate(
-            buf,
-            pagesize=A4,
-            leftMargin=MARGIN_LEFT,
-            rightMargin=MARGIN_RIGHT,
-            topMargin=MARGIN_TOP + 0.4 * cm,
-            bottomMargin=MARGIN_BOTTOM + 0.5 * cm,
-            title=f"Dossiê do Estado — {self.data.estado_nome}",
-            author="ODIN — LEMA/UFPB",
-            subject=f"Relatório de indicadores do estado {self.data.estado_nome}",
-        )
-        doc._title = self._title
+        try:
+            doc = SimpleDocTemplate(
+                buf,
+                pagesize=A4,
+                leftMargin=MARGIN_LEFT,
+                rightMargin=MARGIN_RIGHT,
+                topMargin=MARGIN_TOP + 0.4 * cm,
+                bottomMargin=MARGIN_BOTTOM + 0.5 * cm,
+                title=f"Dossiê do Estado — {self.data.estado_nome}",
+                author="ODIN — LEMA/UFPB",
+                subject=f"Relatório de indicadores do estado {self.data.estado_nome}",
+            )
+            doc._title = self._title
 
-        s = self.styles
-        d = self.data
-        self._story.extend(
-            [
-                Spacer(1, 6.5 * cm),
-                Paragraph("Dossiê do Estado", s["CoverTitle"]),
-                Paragraph(f"{d.estado_nome} / {d.uf}", s["CoverEntity"]),
-                Spacer(1, 8),
-                Paragraph(
-                    f"Gerado em {_data_por_extenso(datetime.now())}", s["CoverDate"]
-                ),
-                Spacer(1, 2.5 * cm),
-                Paragraph("Indicadores Educacionais Consolidados", s["CoverSubtitle"]),
-                Spacer(1, 0.6 * cm),
-                Paragraph(
-                    "Censo Escolar INEP/MEC · Censo Demográfico IBGE", s["CoverDate"]
-                ),
-                PageBreak(),
-                _section_header("Resumo Executivo", "📋"),
-                Spacer(1, 10),
-                Paragraph(
-                    f"Este dossiê apresenta um panorama consolidado dos indicadores educacionais "
-                    f"do estado de <b>{d.estado_nome}</b>, agregando dados de todos os "
-                    f"{d.total_municipios} municípios.",
-                    s["BodyText"],
-                ),
-                Spacer(1, 10),
-                _kpi_row(
-                    [
-                        _kpi_card("Municípios", str(d.total_municipios), ODIN_BLUE),
-                        _kpi_card("Total de Escolas", str(d.total_escolas), ODIN_TEAL),
-                        _kpi_card(
-                            "Total de Alunos",
-                            f"{d.total_alunos:,}".replace(",", "."),
-                            ODIN_GREEN,
-                        ),
-                    ]
-                ),
-                Spacer(1, 10),
-            ]
-        )
-        if d.ideb_por_etapa:
-            header = ["Etapa", "IDEB"]
-            rows = [[e, f"{v:.2f}"] for e, v in d.ideb_por_etapa.items()]
+            s = self.styles
+            d = self.data
+            self._story.extend(
+                [
+                    Spacer(1, 6.5 * cm),
+                    Paragraph("Dossiê do Estado", s["CoverTitle"]),
+                    Paragraph(f"{d.estado_nome} / {d.uf}", s["CoverEntity"]),
+                    Spacer(1, 8),
+                    Paragraph(
+                        f"Gerado em {_data_por_extenso(datetime.now())}", s["CoverDate"]
+                    ),
+                    Spacer(1, 2.5 * cm),
+                    Paragraph(
+                        "Indicadores Educacionais Consolidados", s["CoverSubtitle"]
+                    ),
+                    Spacer(1, 0.6 * cm),
+                    Paragraph(
+                        "Censo Escolar INEP/MEC · Censo Demográfico IBGE",
+                        s["CoverDate"],
+                    ),
+                    PageBreak(),
+                    _section_header("Resumo Executivo", "📋"),
+                    Spacer(1, 10),
+                    Paragraph(
+                        f"Este dossiê apresenta um panorama consolidado dos indicadores educacionais "
+                        f"do estado de <b>{d.estado_nome}</b>, agregando dados de todos os "
+                        f"{d.total_municipios} municípios.",
+                        s["BodyText"],
+                    ),
+                    Spacer(1, 10),
+                    _kpi_row(
+                        [
+                            _kpi_card("Municípios", str(d.total_municipios), ODIN_BLUE),
+                            _kpi_card(
+                                "Total de Escolas", str(d.total_escolas), ODIN_TEAL
+                            ),
+                            _kpi_card(
+                                "Total de Alunos",
+                                f"{d.total_alunos:,}".replace(",", "."),
+                                ODIN_GREEN,
+                            ),
+                        ]
+                    ),
+                    Spacer(1, 10),
+                ]
+            )
+            if d.ideb_por_etapa:
+                header = ["Etapa", "IDEB"]
+                rows = [[e, f"{v:.2f}"] for e, v in d.ideb_por_etapa.items()]
+                self._story.append(
+                    _standard_table(header, rows, [CONTENT_W / 2, CONTENT_W / 2])
+                )
+            self._story.append(PageBreak())
+            self._story.append(Paragraph("Metodologia e Fontes", s["SubSectionTitle"]))
             self._story.append(
-                _standard_table(header, rows, [CONTENT_W / 2, CONTENT_W / 2])
+                Paragraph(
+                    "Este relatório foi gerado pelo ODIN — Observatório de Dados Integrados do Nordeste.",
+                    s["BodyText"],
+                )
             )
-        self._story.append(PageBreak())
-        self._story.append(Paragraph("Metodologia e Fontes", s["SubSectionTitle"]))
-        self._story.append(
-            Paragraph(
-                "Este relatório foi gerado pelo ODIN — Observatório de Dados Integrados do Nordeste.",
-                s["BodyText"],
+            self._story.append(Spacer(1, 5))
+            self._story.append(
+                Paragraph(
+                    f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}",
+                    s["SmallMuted"],
+                )
             )
-        )
-        self._story.append(Spacer(1, 5))
-        self._story.append(
-            Paragraph(
-                f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}",
-                s["SmallMuted"],
-            )
-        )
 
-        doc.build(self._story, onFirstPage=_header_footer, onLaterPages=_header_footer)
-        buf.seek(0)
-        return buf
+            doc.build(
+                self._story, onFirstPage=_header_footer, onLaterPages=_header_footer
+            )
+            buf.seek(0)
+            return buf
+        except BaseException:
+            buf.close()
+            raise
